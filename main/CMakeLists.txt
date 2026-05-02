@@ -6,6 +6,7 @@ set(SOURCES
     "./tca9555_driver/tca9555_driver.c"
     "./lcd_driver/lcd_driver.c"
     "./lvgl_driver/lvgl_driver.c"
+    "./robot_state.c"
 )
 
 set(INCLUDE_DIRS

@@ -9,34 +9,17 @@
 #include "lcd_driver.h"
 #include "lvgl_driver.h"
 #include "robot_face.h"
-#include "esp_lvgl_port.h"
+#include "robot_state.h"
 
 static const char *TAG = "app_main";
 
 static void robot_demo_task(void *arg)
 {
-    /* Short delay to let the LVGL task settle */
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    /* Announce and start speaking animation */
-    lvgl_port_lock(0);
-    robot_face_set_text("Szia Zita!");
-    robot_face_set_speaking(true);
-    lvgl_port_unlock();
-
-    /* Play the greeting from SD card */
-    Audio_Play_Music("file://sdcard/ZITA.MP3");
-
-    /* Keep speaking animation while audio plays (~5 s) */
+    vTaskDelay(pdMS_TO_TICKS(500));
+    robot_say_file("Szia Zita!", "file://sdcard/ZITA.MP3");
     vTaskDelay(pdMS_TO_TICKS(5000));
+    robot_set_idle();
 
-    /* Return to idle */
-    lvgl_port_lock(0);
-    robot_face_set_speaking(false);
-    robot_face_set_text("Varok...");
-    lvgl_port_unlock();
-
-    /* Idle loop */
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(15000));
     }
@@ -65,10 +48,9 @@ void app_main(void)
     /* 6. LVGL port init */
     ESP_ERROR_CHECK(lvgl_driver_init());
 
-    /* 7. Create robot face UI under LVGL lock */
+    /* 7. Create robot face UI */
     lvgl_port_lock(0);
     robot_face_create();
-    robot_face_set_text("Szia Zita!");
     lvgl_port_unlock();
 
     /* 8. Start demo task */
