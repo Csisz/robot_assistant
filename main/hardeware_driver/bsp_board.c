@@ -386,29 +386,28 @@ esp_err_t esp_audio_play(const int16_t* data, int length, uint32_t ticks_to_wait
     }
 
     /*
-     * The original Waveshare helper tried to upsample/downsample manually with:
-     * audio_time = 16000 / s_play_sample_rate.
-     * This crashes when s_play_sample_rate is 48000 because integer division gives 0.
+     * The decoded MP3 stream arrives as 16-bit mono PCM.
+     * The ES8311 DAC is opened as 32-bit stereo, so each output frame needs:
+     *   [ int32_t left | int32_t right ]
+     * where each int32_t is the int16 sample left-shifted by 16 bits.
      *
-     * The ESP GMF/simple-player pipeline already contains the decoder/rate converter.
-     * Here we only need to convert 16-bit PCM samples to the 32-bit I2S slot format
-     * expected by the ES8311 codec.
+     * Without the stereo duplication the output buffer is half the expected
+     * size and the codec plays through it at double speed.
      */
 
-    if (s_bits_per_chan == 32) {
-        return esp_codec_dev_write(play_dev, (void *)data, length);
-    }
-
-    int sample_count = length / sizeof(int16_t);
-    int out_length = sample_count * sizeof(int32_t);
+    int input_samples  = length / sizeof(int16_t);
+    int output_samples = input_samples * 2;                  /* stereo: L + R */
+    int out_length     = output_samples * sizeof(int32_t);
 
     int32_t *data_out = (int32_t *)malloc(out_length);
     if (data_out == NULL) {
         return ESP_ERR_NO_MEM;
     }
 
-    for (int i = 0; i < sample_count; i++) {
-        data_out[i] = ((int32_t)data[i]) << 16;
+    for (int i = 0; i < input_samples; i++) {
+        int32_t s = ((int32_t)data[i]) << 16;
+        data_out[i * 2 + 0] = s;   /* left  channel */
+        data_out[i * 2 + 1] = s;   /* right channel */
     }
 
     ret = esp_codec_dev_write(play_dev, (void *)data_out, out_length);
