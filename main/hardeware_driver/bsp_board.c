@@ -117,11 +117,12 @@ esp_err_t bsp_codec_adc_init(int sample_rate)
     record_dev = esp_codec_dev_new(&dev_cfg);
 
     esp_codec_dev_sample_info_t fs = {
-        .sample_rate = 16000,
+        .sample_rate = sample_rate,   /* must match I2S bus rate – was hardcoded 16000 */
         .channel = 2,
         .bits_per_sample = 32,
     };
     esp_codec_dev_open(record_dev, &fs);
+    ESP_LOGI(TAG, "ADC codec opened: sample_rate=%d", sample_rate);
     // esp_codec_dev_set_in_gain(record_dev, RECORD_VOLUME);
     esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), RECORD_VOLUME);
     esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1), RECORD_VOLUME);
@@ -470,13 +471,10 @@ esp_err_t esp_board_init(uint32_t sample_rate, int channel_format, int bits_per_
     ESP_LOGI(TAG, "esp_board_init: s_play_sample_rate=%d s_play_channel_format=%d s_bits_per_chan=%d",
              s_play_sample_rate, s_play_channel_format, s_bits_per_chan);
 
-    /* I2S clock is set to the requested playback rate.
-     * TX (DAC/ES8311) and RX (ADC/ES7210) share the same I2S bus;
-     * the ADC codec is opened separately at 16000 Hz in bsp_codec_adc_init. */
+    /* TX and RX share the same I2S bus – both must use the same sample rate.
+     * bsp_codec_adc_init() now also opens the RX codec at sample_rate. */
     bsp_i2s_init(I2S_NUM_1, sample_rate, 2, 32);
-
-    /* ADC stays at 16000 Hz (mic input); DAC uses the requested sample_rate */
-    bsp_codec_init(16000, sample_rate, 2, 32);
+    bsp_codec_init(sample_rate, sample_rate, 2, 32);
 
     /* Initialize PA */
      /*gpio_config_t  io_conf;
