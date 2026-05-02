@@ -10,14 +10,26 @@
 #include "lvgl_driver.h"
 #include "robot_face.h"
 #include "robot_state.h"
+#include "esp_lvgl_port.h"
 
 static const char *TAG = "app_main";
+
+static void robot_audio_state_cb(esp_asp_state_t state)
+{
+    if (state == ESP_ASP_STATE_FINISHED || state == ESP_ASP_STATE_ERROR) {
+        lvgl_port_lock(0);
+        robot_face_set_speaking(false);
+        robot_face_set_text("Varok...");
+        lvgl_port_unlock();
+    }
+}
 
 static void robot_demo_task(void *arg)
 {
     vTaskDelay(pdMS_TO_TICKS(500));
     robot_say_file("Szia Zita!", "file://sdcard/ZITA.MP3");
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    /* Fallback: ensure idle state even if callback fires late */
+    vTaskDelay(pdMS_TO_TICKS(10000));
     robot_set_idle();
 
     while (1) {
@@ -40,6 +52,7 @@ void app_main(void)
 
     /* 4. Audio pipeline */
     Audio_Play_Init();
+    Audio_Set_State_Callback(robot_audio_state_cb);
     Volume_Adjustment(60);
 
     /* 5. LCD hardware init */

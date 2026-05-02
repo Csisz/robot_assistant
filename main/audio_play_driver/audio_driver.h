@@ -20,6 +20,9 @@ extern "C" {
 
 #define Volume_MAX  100
 
+typedef void (*audio_state_callback_t)(esp_asp_state_t state);
+void Audio_Set_State_Callback(audio_state_callback_t cb);
+
 void Audio_Play_Init(void);
 void Volume_Adjustment(uint8_t Vol);
 uint8_t get_audio_volume(void);

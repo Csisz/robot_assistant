@@ -8,6 +8,12 @@ static const char *TAG = "audio play";
 
 static uint8_t Volume = PLAYER_VOLUME;
 static esp_asp_handle_t handle = NULL;
+static audio_state_callback_t s_state_cb = NULL;
+
+void Audio_Set_State_Callback(audio_state_callback_t cb)
+{
+    s_state_cb = cb;
+}
 
 static void Audio_PA_EN(void)
 {
@@ -47,10 +53,9 @@ static int mock_event_callback(esp_asp_event_pkt_t *event, void *ctx)
         memcpy(&st, event->payload, event->payload_size);
 
         ESP_LOGI(TAG, "Get State, %d,%s", st, esp_audio_simple_player_state_to_str(st));
-        /*if(st == ESP_ASP_STATE_FINISHED)
-        {
-
-        }*/
+        if (s_state_cb) {
+            s_state_cb(st);
+        }
     }
     return 0;
 }
