@@ -172,6 +172,8 @@ esp_err_t bsp_codec_dac_init(int sample_rate, int channel_format, int bits_per_c
     };
     esp_codec_dev_set_out_vol(play_dev, PLAYER_VOLUME);
     esp_codec_dev_open(play_dev, &fs);
+    ESP_LOGI(TAG, "DAC codec opened: sample_rate=%d channels=%d bits=%d",
+             sample_rate, channel_format, bits_per_chan);
 
     return ret_val;
 }
@@ -266,6 +268,9 @@ esp_err_t esp_audio_get_play_vol(int *volume)
 // static esp_err_t bsp_i2s_init(i2s_port_t i2s_num, uint32_t sample_rate, i2s_channel_fmt_t channel_format, i2s_bits_per_chan_t bits_per_chan)
 static esp_err_t bsp_i2s_init(i2s_port_t i2s_num, uint32_t sample_rate, int channel_format, int bits_per_chan)
 {
+    ESP_LOGI(TAG, "bsp_i2s_init: I2S%d sample_rate=%lu channel_format=%d bits_per_chan=%d",
+             (int)i2s_num, (unsigned long)sample_rate, channel_format, bits_per_chan);
+
     esp_err_t ret_val = ESP_OK;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -369,62 +374,47 @@ static esp_err_t bsp_codec_deinit()
 
 esp_err_t esp_audio_play(const int16_t* data, int length, uint32_t ticks_to_wait)
 {
-    size_t bytes_write = 0;
     esp_err_t ret = ESP_OK;
+
     if (!play_dev) {
         return ESP_FAIL;
     }
 
-    int out_length= length;
-    int audio_time = 1;
-    audio_time *= (16000 / s_play_sample_rate);
-    audio_time *= (2 / s_play_channel_format);
-
-    int *data_out = NULL;
-    if (s_bits_per_chan != 32) {
-        out_length = length * 2;
-        data_out = malloc(out_length);
-        for (int i = 0; i < length / sizeof(int16_t); i++) {
-            int ret = data[i];
-            data_out[i] = ret << 16;
-        }
+    if (data == NULL || length <= 0) {
+        return ESP_ERR_INVALID_ARG;
     }
 
-    int *data_out_1 = NULL;
-    if (s_play_channel_format != 2 || s_play_sample_rate != 16000) {
-        out_length *= audio_time;
-        data_out_1 = malloc(out_length);
-        int *tmp_data = NULL;
-        if (data_out != NULL) {
-            tmp_data = data_out;
-        } else {
-            tmp_data = (int *)data;
-        }
+    /*
+     * The original Waveshare helper tried to upsample/downsample manually with:
+     * audio_time = 16000 / s_play_sample_rate.
+     * This crashes when s_play_sample_rate is 48000 because integer division gives 0.
+     *
+     * The ESP GMF/simple-player pipeline already contains the decoder/rate converter.
+     * Here we only need to convert 16-bit PCM samples to the 32-bit I2S slot format
+     * expected by the ES8311 codec.
+     */
 
-        for (int i = 0; i < out_length / (audio_time * sizeof(int)); i++) {
-            for (int j = 0; j < audio_time; j++) {
-                data_out_1[audio_time * i + j] = tmp_data[i];
-            }
-        }
-        if (data_out != NULL) {
-            free(data_out);
-            data_out = NULL;
-        }
+    if (s_bits_per_chan == 32) {
+        return esp_codec_dev_write(play_dev, (void *)data, length);
     }
 
-    if (data_out != NULL) {
-        ret = esp_codec_dev_write(play_dev, (void *)data_out, out_length);
-        free(data_out);
-    } else if (data_out_1 != NULL) {
-        ret = esp_codec_dev_write(play_dev, (void *)data_out_1, out_length);
-        free(data_out_1);
-    } else {
-        ret = esp_codec_dev_write(play_dev, (void *)data, length);
+    int sample_count = length / sizeof(int16_t);
+    int out_length = sample_count * sizeof(int32_t);
+
+    int32_t *data_out = (int32_t *)malloc(out_length);
+    if (data_out == NULL) {
+        return ESP_ERR_NO_MEM;
     }
 
+    for (int i = 0; i < sample_count; i++) {
+        data_out[i] = ((int32_t)data[i]) << 16;
+    }
+
+    ret = esp_codec_dev_write(play_dev, (void *)data_out, out_length);
+
+    free(data_out);
     return ret;
 }
-
 esp_err_t esp_get_feed_data(bool is_get_raw_channel, int16_t *buffer, int buffer_len)
 {
     esp_err_t ret = ESP_OK;
@@ -477,9 +467,16 @@ esp_err_t esp_board_init(uint32_t sample_rate, int channel_format, int bits_per_
     }
     s_bits_per_chan = bits_per_chan;
 
-    bsp_i2s_init(I2S_NUM_1, 16000, 2, 32);
-    // Because record and play use the same i2s.
-    bsp_codec_init(16000, 16000, 2, 32);
+    ESP_LOGI(TAG, "esp_board_init: s_play_sample_rate=%d s_play_channel_format=%d s_bits_per_chan=%d",
+             s_play_sample_rate, s_play_channel_format, s_bits_per_chan);
+
+    /* I2S clock is set to the requested playback rate.
+     * TX (DAC/ES8311) and RX (ADC/ES7210) share the same I2S bus;
+     * the ADC codec is opened separately at 16000 Hz in bsp_codec_adc_init. */
+    bsp_i2s_init(I2S_NUM_1, sample_rate, 2, 32);
+
+    /* ADC stays at 16000 Hz (mic input); DAC uses the requested sample_rate */
+    bsp_codec_init(16000, sample_rate, 2, 32);
 
     /* Initialize PA */
      /*gpio_config_t  io_conf;

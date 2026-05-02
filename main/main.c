@@ -47,7 +47,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Robot Assistant starting...");
 
     /* 1. Board init (I2C, I2S, codecs) */
-    ESP_ERROR_CHECK(esp_board_init(16000, 2, 16));
+    ESP_ERROR_CHECK(esp_board_init(48000, 2, 16));
 
     /* 2. IO expander (TCA9555) – required for LCD reset and PA enable */
     tca9555_driver_init();
