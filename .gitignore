@@ -1,0 +1,22 @@
+# ESP-IDF build output
+build/
+sdkconfig.old
+
+# Managed components (downloaded by idf.py, reproduced from idf_component.yml)
+managed_components/
+
+# Dependencies lock is intentionally tracked to pin versions
+# dependencies.lock  ← keep this
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Clangd (generated, not needed in repo)
+.clangd
+compile_commands.json
