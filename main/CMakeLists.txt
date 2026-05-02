@@ -7,6 +7,7 @@ set(SOURCES
     "./lcd_driver/lcd_driver.c"
     "./lvgl_driver/lvgl_driver.c"
     "./robot_state.c"
+    "./button_driver/button_driver.c"
 )
 
 set(INCLUDE_DIRS
@@ -16,6 +17,7 @@ set(INCLUDE_DIRS
     "./tca9555_driver"
     "./lcd_driver"
     "./lvgl_driver"
+    "./button_driver"
 )
 
 idf_component_register(

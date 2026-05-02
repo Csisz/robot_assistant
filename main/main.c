@@ -11,6 +11,7 @@
 #include "robot_face.h"
 #include "robot_state.h"
 #include "esp_lvgl_port.h"
+#include "button_driver.h"
 
 static const char *TAG = "app_main";
 
@@ -21,6 +22,25 @@ static void robot_audio_state_cb(esp_asp_state_t state)
         robot_face_set_speaking(false);
         robot_face_set_text("Varok...");
         lvgl_port_unlock();
+    }
+}
+
+static void on_key_press(key_id_t key_id, key_event_t event, void *user_data)
+{
+    if (event != KEY_EVENT_SHORT_PRESS) return;
+
+    switch (key_id) {
+        case KEY_ID_9:
+            robot_say_file("Szia Zita!", "file://sdcard/ZITA.MP3");
+            break;
+        case KEY_ID_10:
+            robot_say_file("Szia Ida!", "file://sdcard/IDA.MP3");
+            break;
+        case KEY_ID_11:
+            robot_say_file("Szia Zsoli!", "file://sdcard/ZSOLI.MP3");
+            break;
+        default:
+            break;
     }
 }
 
@@ -46,6 +66,8 @@ void app_main(void)
 
     /* 2. IO expander (TCA9555) – required for LCD reset and PA enable */
     tca9555_driver_init();
+    key_register_callback(on_key_press);
+    key_module_init(NULL);
 
     /* 3. Mount SD card */
     ESP_ERROR_CHECK(esp_sdcard_init("/sdcard", 10));
