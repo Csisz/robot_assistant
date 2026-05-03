@@ -13,6 +13,8 @@
 #include "esp_lvgl_port.h"
 #include "button_driver.h"
 #include "camera_driver.h"
+#include "wifi_manager.h"
+#include "camera_web_server.h"
 
 static const char *TAG = "app_main";
 
@@ -121,6 +123,16 @@ void app_main(void)
     /* 8. Camera init and health check */
     robot_camera_test();
 
-    /* 9. Start demo task */
+    /* 9. Wi-Fi + web server */
+    if (wifi_manager_start() == ESP_OK) {
+        camera_web_server_start();
+        lvgl_port_lock(0);
+        robot_face_set_text("Kamera web kesz");
+        lvgl_port_unlock();
+    } else {
+        ESP_LOGW(TAG, "WiFi not connected — web server skipped");
+    }
+
+    /* 10. Start demo task */
     xTaskCreate(robot_demo_task, "robot_demo", 4096, NULL, 5, NULL);
 }

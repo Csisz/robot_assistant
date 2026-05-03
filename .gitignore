@@ -17,6 +17,9 @@ managed_components/
 .DS_Store
 Thumbs.db
 
+# WiFi credentials — never commit the real file
+main/secrets.h
+
 # Clangd (generated, not needed in repo)
 .clangd
 compile_commands.json

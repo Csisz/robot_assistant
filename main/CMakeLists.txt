@@ -9,6 +9,8 @@ set(SOURCES
     "./robot_state.c"
     "./button_driver/button_driver.c"
     "./camera_driver/camera_driver.c"
+    "./wifi_manager.c"
+    "./camera_web_server.c"
 )
 
 set(INCLUDE_DIRS
@@ -25,4 +27,10 @@ set(INCLUDE_DIRS
 idf_component_register(
     SRCS ${SOURCES}
     INCLUDE_DIRS ${INCLUDE_DIRS}
+    REQUIRES
+        esp_wifi
+        esp_netif
+        esp_event
+        nvs_flash
+        esp_http_server
 )
