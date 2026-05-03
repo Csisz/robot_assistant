@@ -1,6 +1,7 @@
 #include "camera_driver.h"
 #include "tca9555_driver.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 
 static const char *TAG = "camera_driver";
 
@@ -29,8 +30,8 @@ static camera_config_t camera_config = {
     .ledc_timer    = CAM_LEDC_TIMER,
     .ledc_channel  = CAM_LEDC_CHANNEL,
 
-    .pixel_format  = PIXFORMAT_RGB565,
-    .frame_size    = FRAMESIZE_QVGA,
+    .pixel_format  = PIXFORMAT_JPEG,
+    .frame_size    = FRAMESIZE_QQVGA,   /* 160x120 — minimal allocation */
     .jpeg_quality  = 12,
     .fb_count      = 1,
     .fb_location   = CAMERA_FB_IN_PSRAM,
@@ -59,6 +60,13 @@ esp_err_t Camera_Driver_Init(void)
 
     camera_select_gpio_a();
     camera_power_on();
+
+    ESP_LOGI(TAG, "SPIRAM free:          %u B", (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    ESP_LOGI(TAG, "SPIRAM largest block: %u B", (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    ESP_LOGI(TAG, "Internal free:        %u B", (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    ESP_LOGI(TAG, "Camera config: frame_size=%d pixel_format=%d fb_count=%d fb_location=%d",
+             camera_config.frame_size, (int)camera_config.pixel_format,
+             camera_config.fb_count, (int)camera_config.fb_location);
 
     esp_err_t err = esp_camera_init(&camera_config);
     if (err != ESP_OK) {
