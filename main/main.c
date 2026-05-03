@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include <string.h>
 
 #include "bsp_board.h"
 #include "tca9555_driver.h"
@@ -15,6 +16,8 @@
 #include "camera_driver.h"
 #include "wifi_manager.h"
 #include "camera_web_server.h"
+#include "face_detect.h"
+#include "esp_heap_caps.h"
 
 static const char *TAG = "app_main";
 
@@ -76,6 +79,68 @@ static void on_key_press(key_id_t key_id, key_event_t event, void *user_data)
     }
 }
 
+static void face_detect_task(void *arg)
+{
+    /* Wait for camera + web server to fully settle */
+    vTaskDelay(pdMS_TO_TICKS(3000));
+
+    if (face_detect_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Face detector unavailable — task exiting");
+        vTaskDelete(NULL);
+        return;
+    }
+
+    while (1) {
+        /* --- grab frame ------------------------------------------------ */
+        camera_fb_t *fb = NULL;
+        if (camera_capture_frame(&fb) != ESP_OK || !fb) {
+            vTaskDelay(pdMS_TO_TICKS(2500));
+            continue;
+        }
+
+        /* Copy RGB565 data to PSRAM so the camera buffer is freed quickly */
+        size_t   data_len  = fb->len;
+        int      frame_w   = fb->width;
+        int      frame_h   = fb->height;
+        uint16_t *frame_copy = (uint16_t *)heap_caps_malloc(data_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
+        if (frame_copy) {
+            memcpy(frame_copy, fb->buf, data_len);
+        }
+        camera_release_frame(fb);   /* release mutex before slow inference */
+
+        if (!frame_copy) {
+            ESP_LOGW(TAG, "PSRAM alloc failed (%zu B) — skipping frame", data_len);
+            vTaskDelay(pdMS_TO_TICKS(2500));
+            continue;
+        }
+
+        /* --- infer ----------------------------------------------------- */
+        ESP_LOGD(TAG, "SPIRAM free before detect: %u B  Internal: %u B",
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+
+        bool face = face_detect_run(frame_copy, frame_w, frame_h);
+        free(frame_copy);
+
+        ESP_LOGD(TAG, "SPIRAM free after  detect: %u B  Internal: %u B",
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+
+        /* --- react ----------------------------------------------------- */
+        if (face) {
+            ESP_LOGI(TAG, "Face detected");
+            lvgl_port_lock(0);
+            robot_face_set_text("Latlak!");
+            lvgl_port_unlock();
+        } else {
+            ESP_LOGI(TAG, "No face");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(2500));
+    }
+}
+
 static void robot_demo_task(void *arg)
 {
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -121,7 +186,10 @@ void app_main(void)
     lvgl_port_unlock();
 
     /* 8. Camera init and health check */
-    robot_camera_test();
+    if (robot_camera_test() == ESP_OK) {
+        /* Start face detection in a background task (8 KB stack for inference) */
+        xTaskCreate(face_detect_task, "face_detect", 8192, NULL, 3, NULL);
+    }
 
     /* 9. Wi-Fi + web server */
     if (wifi_manager_start() == ESP_OK) {

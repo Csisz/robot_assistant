@@ -30,8 +30,8 @@ static camera_config_t camera_config = {
     .ledc_timer    = CAM_LEDC_TIMER,
     .ledc_channel  = CAM_LEDC_CHANNEL,
 
-    .pixel_format  = PIXFORMAT_JPEG,
-    .frame_size    = FRAMESIZE_QQVGA,   /* 160x120 — minimal allocation */
+    .pixel_format  = PIXFORMAT_RGB565,   /* raw frames for face detection; web server converts to JPEG */
+    .frame_size    = FRAMESIZE_QQVGA,   /* 160x120 x 2 B = 38,400 B in PSRAM */
     .jpeg_quality  = 12,
     .fb_count      = 1,
     .fb_location   = CAMERA_FB_IN_PSRAM,

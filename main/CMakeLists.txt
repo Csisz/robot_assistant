@@ -11,6 +11,7 @@ set(SOURCES
     "./camera_driver/camera_driver.c"
     "./wifi_manager.c"
     "./camera_web_server.c"
+    "./face_detect.cpp"
 )
 
 set(INCLUDE_DIRS
@@ -33,4 +34,27 @@ idf_component_register(
         esp_event
         nvs_flash
         esp_http_server
+        esp_timer
+        esp_lcd
+        esp_driver_gpio
+        esp_driver_i2c
+        esp_driver_i2s
+        esp_driver_spi
+        esp_driver_ledc
+        sdmmc
+        fatfs
+        esp_psram
+        esp_lvgl_port
+        lvgl
+        espressif__esp_codec_dev
+        espressif__esp_audio_simple_player
+        espressif__esp_audio_codec
+        espressif__esp_audio_effects
+        espressif__gmf_core
+        espressif__gmf_io
+        espressif__gmf_audio
+        espressif__esp_io_expander
+        espressif__esp_io_expander_tca95xx_16bit
+        espressif__esp32-camera
+        espressif__esp-dl
 )

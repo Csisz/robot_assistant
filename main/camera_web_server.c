@@ -9,8 +9,33 @@
 
 static const char *TAG = "cam_server";
 
-static httpd_handle_t  s_server    = NULL;
+static httpd_handle_t    s_server  = NULL;
 static SemaphoreHandle_t s_cam_mux = NULL;
+
+/* ------------------------------------------------------------------ */
+/* Shared camera capture API (used by web server and face_detect task) */
+/* ------------------------------------------------------------------ */
+
+esp_err_t camera_capture_frame(camera_fb_t **fb)
+{
+    if (!s_cam_mux) return ESP_ERR_INVALID_STATE;
+    if (xSemaphoreTake(s_cam_mux, pdMS_TO_TICKS(2000)) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    *fb = esp_camera_fb_get();
+    if (!*fb) {
+        xSemaphoreGive(s_cam_mux);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+    /* Caller MUST call camera_release_frame() to unlock the mutex. */
+}
+
+void camera_release_frame(camera_fb_t *fb)
+{
+    esp_camera_fb_return(fb);
+    xSemaphoreGive(s_cam_mux);
+}
 
 /* ------------------------------------------------------------------ */
 /* HTML page                                                           */
@@ -26,13 +51,25 @@ static const char INDEX_HTML[] =
     "     padding:20px;margin:0}"
     "h2{margin-bottom:12px}"
     "img{max-width:100%;border:2px solid #555;border-radius:4px}"
+    "#status{margin-top:10px;font-size:0.9em;color:#aaa}"
     "</style>"
     "</head><body>"
     "<h2>ESP32 Robot Camera</h2>"
     "<img id='cam' src='/capture.jpg'>"
+    "<div id='status'>Connecting...</div>"
     "<script>"
+    "let ok=0,fail=0;"
     "setInterval(()=>{"
-    "  document.getElementById('cam').src='/capture.jpg?t='+Date.now();"
+    "  const img=new Image();"
+    "  const t=Date.now();"
+    "  img.onload=()=>{"
+    "    document.getElementById('cam').src=img.src;"
+    "    document.getElementById('status').textContent='OK '+ok++;"
+    "  };"
+    "  img.onerror=()=>{"
+    "    document.getElementById('status').textContent='ERR '+fail++;"
+    "  };"
+    "  img.src='/capture.jpg?t='+t;"
     "},1000);"
     "</script>"
     "</body></html>";
@@ -51,35 +88,32 @@ static esp_err_t index_handler(httpd_req_t *req)
 /* ------------------------------------------------------------------ */
 static esp_err_t capture_handler(httpd_req_t *req)
 {
-    if (xSemaphoreTake(s_cam_mux, pdMS_TO_TICKS(2000)) != pdTRUE) {
-        ESP_LOGW(TAG, "Camera mutex timeout");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "camera busy");
-        return ESP_FAIL;
-    }
-
-    camera_fb_t *fb = esp_camera_fb_get();
-    if (!fb) {
-        xSemaphoreGive(s_cam_mux);
-        ESP_LOGE(TAG, "esp_camera_fb_get() returned NULL");
+    camera_fb_t *fb = NULL;
+    if (camera_capture_frame(&fb) != ESP_OK || !fb) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "capture failed");
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Serving frame: %dx%d  len=%zu", fb->width, fb->height, fb->len);
+    /* Convert RGB565 frame to JPEG; frame buffer returned before HTTP send. */
+    uint8_t *jpg_buf = NULL;
+    size_t   jpg_len = 0;
+    bool ok = frame2jpg(fb, 80, &jpg_buf, &jpg_len);
 
-    esp_err_t res = ESP_OK;
-    if (fb->format == PIXFORMAT_JPEG) {
-        httpd_resp_set_type(req, "image/jpeg");
-        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-        res = httpd_resp_send(req, (const char *)fb->buf, (ssize_t)fb->len);
-    } else {
-        ESP_LOGE(TAG, "Frame is not JPEG (format=%d)", (int)fb->format);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "not jpeg");
-        res = ESP_FAIL;
+    ESP_LOGI(TAG, "Frame %dx%d len=%zu → JPEG %zu B  ok=%d",
+             fb->width, fb->height, fb->len, jpg_len, ok);
+
+    camera_release_frame(fb);   /* release ASAP, before the slow HTTP send */
+
+    if (!ok || !jpg_buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "jpeg conv failed");
+        free(jpg_buf);
+        return ESP_FAIL;
     }
 
-    esp_camera_fb_return(fb);
-    xSemaphoreGive(s_cam_mux);
+    httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    esp_err_t res = httpd_resp_send(req, (const char *)jpg_buf, (ssize_t)jpg_len);
+    free(jpg_buf);
     return res;
 }
 
