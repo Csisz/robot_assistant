@@ -12,6 +12,7 @@
 #include "robot_state.h"
 #include "esp_lvgl_port.h"
 #include "button_driver.h"
+#include "camera_driver.h"
 
 static const char *TAG = "app_main";
 
@@ -23,6 +24,35 @@ static void robot_audio_state_cb(esp_asp_state_t state)
         robot_face_set_text("Varok...");
         lvgl_port_unlock();
     }
+}
+
+static esp_err_t robot_camera_test(void)
+{
+    esp_err_t err = Camera_Driver_Init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Camera init failed: %s", esp_err_to_name(err));
+        lvgl_port_lock(0);
+        robot_face_set_text("Nem latok kamerat");
+        lvgl_port_unlock();
+        return err;
+    }
+
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (!fb) {
+        ESP_LOGE(TAG, "Camera capture failed");
+        lvgl_port_lock(0);
+        robot_face_set_text("Nem latok kamerat");
+        lvgl_port_unlock();
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Camera frame: %dx%d fmt=%d len=%zu", fb->width, fb->height, (int)fb->format, fb->len);
+    esp_camera_fb_return(fb);
+
+    lvgl_port_lock(0);
+    robot_face_set_text("Latlak!");
+    lvgl_port_unlock();
+    return ESP_OK;
 }
 
 static void on_key_press(key_id_t key_id, key_event_t event, void *user_data)
@@ -88,6 +118,9 @@ void app_main(void)
     robot_face_create();
     lvgl_port_unlock();
 
-    /* 8. Start demo task */
+    /* 8. Camera init and health check */
+    robot_camera_test();
+
+    /* 9. Start demo task */
     xTaskCreate(robot_demo_task, "robot_demo", 4096, NULL, 5, NULL);
 }

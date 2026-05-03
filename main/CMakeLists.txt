@@ -8,6 +8,7 @@ set(SOURCES
     "./lvgl_driver/lvgl_driver.c"
     "./robot_state.c"
     "./button_driver/button_driver.c"
+    "./camera_driver/camera_driver.c"
 )
 
 set(INCLUDE_DIRS
@@ -18,6 +19,7 @@ set(INCLUDE_DIRS
     "./lcd_driver"
     "./lvgl_driver"
     "./button_driver"
+    "./camera_driver"
 )
 
 idf_component_register(
