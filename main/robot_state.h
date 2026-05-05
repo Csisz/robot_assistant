@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,6 +15,7 @@ typedef enum {
 } robot_state_t;
 
 robot_state_t robot_get_state(void);
+bool          robot_is_speaking(void);
 
 void robot_set_idle(void);
 void robot_set_speaking(const char *text);

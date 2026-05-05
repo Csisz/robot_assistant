@@ -13,6 +13,12 @@ robot_state_t robot_get_state(void)
     return s_state;
 }
 
+bool robot_is_speaking(void)
+{
+    return s_state == ROBOT_SPEAKING ||
+           Audio_Get_Current_State() == ESP_ASP_STATE_RUNNING;
+}
+
 void robot_set_idle(void)
 {
     ESP_LOGI(TAG, "-> IDLE");
@@ -70,6 +76,10 @@ void robot_set_sleeping(void)
 
 void robot_say_file(const char *text, const char *url)
 {
+    if (s_state == ROBOT_SPEAKING) {
+        ESP_LOGW(TAG, "Already speaking — ignoring '%s'", url ? url : "");
+        return;
+    }
     ESP_LOGI(TAG, "-> SPEAKING (file): %s | %s", text ? text : "", url ? url : "");
     s_state = ROBOT_SPEAKING;
     lvgl_port_lock(0);

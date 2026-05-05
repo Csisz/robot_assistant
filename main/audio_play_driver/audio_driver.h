@@ -32,6 +32,8 @@ esp_gmf_err_t Audio_Stop_Play(void);
 esp_gmf_err_t Audio_Resume_Play(void);
 esp_gmf_err_t Audio_Pause_Play(void);
 esp_asp_state_t Audio_Get_Current_State(void);
+/* Disable PA without touching the pipeline — safe to call from audio callbacks */
+void Audio_PA_Mute(void);
 
 #ifdef __cplusplus
 }

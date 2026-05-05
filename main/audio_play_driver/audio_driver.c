@@ -80,6 +80,8 @@ static void pipeline_init(void)
 esp_gmf_err_t Audio_Play_Music(const char* url)
 {
     esp_audio_simple_player_stop(handle);
+    /* Restore codec volume in case Audio_PA_Mute() zeroed it during an error */
+    esp_audio_set_play_vol(Volume);
     esp_gmf_err_t err = esp_audio_simple_player_run(handle, url, NULL);
     Audio_PA_EN();
     return err;
@@ -139,4 +141,14 @@ void Volume_Adjustment(uint8_t Vol)
 uint8_t get_audio_volume(void)
 {
     return Volume;
+}
+
+void Audio_PA_Mute(void)
+{
+    /* Zero the codec DAC first so the analog stage goes quiet, then disable
+       the power amplifier.  Both steps are needed: PA off stops the speaker,
+       DAC silence prevents the codec from sending a noise signal if the PA is
+       re-enabled before Audio_Play_Music() can restore volume. */
+    esp_audio_set_play_vol(0);
+    Audio_PA_DIS();
 }

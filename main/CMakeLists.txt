@@ -12,6 +12,10 @@ set(SOURCES
     "./wifi_manager.c"
     "./camera_web_server.c"
     "./face_detect.cpp"
+    "./face_recognition.cpp"
+    "./face_enroll.c"
+    "./face_status.c"
+    "./led_effects.c"
 )
 
 set(INCLUDE_DIRS
@@ -57,4 +61,7 @@ idf_component_register(
         espressif__esp_io_expander_tca95xx_16bit
         espressif__esp32-camera
         espressif__esp-dl
+        espressif__human_face_detect
+        espressif__human_face_recognition
+        espressif__led_strip
 )

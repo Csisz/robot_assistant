@@ -101,7 +101,7 @@ extern "C" {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 
 #define I2S_CONFIG_DEFAULT(sample_rate, channel_fmt, bits_per_chan) { \
-        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(16000), \
+        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(sample_rate), \
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(32, I2S_SLOT_MODE_STEREO), \
         .gpio_cfg = { \
             .mclk = GPIO_I2S_MCLK, \
