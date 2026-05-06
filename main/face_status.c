@@ -1,4 +1,5 @@
 #include "face_status.h"
+#include "face_enroll.h"
 #include "robot_state.h"
 #include "led_effects.h"
 #include "esp_log.h"
@@ -9,8 +10,8 @@
 static const char *TAG = "face_status";
 
 /* Written by face_detect_task (prio 3), read by httpd task (prio 5).
-   Updates happen at most every 2500 ms; reads are display-only.
-   A brief inconsistent read is acceptable here without a mutex. */
+   Updates at most every 2500 ms; reads are display-only.
+   A brief inconsistent read is acceptable without a mutex. */
 static struct {
     bool    recognition_available;
     bool    face_present;
@@ -21,6 +22,8 @@ static struct {
     float   confidence;
     int64_t last_seen_us;
     char    last_audio[64];
+    char    last_error[80];
+    int     known_people_count;
 } s_st;
 
 /* ------------------------------------------------------------------ */
@@ -28,12 +31,12 @@ static struct {
 static const char *s_robot_state_name(robot_state_t s)
 {
     switch (s) {
-        case ROBOT_IDLE:     return "IDLE";
-        case ROBOT_SPEAKING: return "SPEAKING";
-        case ROBOT_THINKING: return "THINKING";
+        case ROBOT_IDLE:      return "IDLE";
+        case ROBOT_SPEAKING:  return "SPEAKING";
+        case ROBOT_THINKING:  return "THINKING";
         case ROBOT_LISTENING: return "LISTENING";
-        case ROBOT_SLEEPING: return "SLEEPING";
-        default:             return "UNKNOWN";
+        case ROBOT_SLEEPING:  return "SLEEPING";
+        default:              return "UNKNOWN";
     }
 }
 
@@ -97,10 +100,23 @@ void face_status_set_last_audio(const char *audio_file)
     else            s_st.last_audio[0] = '\0';
 }
 
+void face_status_set_last_error(const char *err)
+{
+    if (err) strlcpy(s_st.last_error, err, sizeof(s_st.last_error));
+    else     s_st.last_error[0] = '\0';
+}
+
+void face_status_set_known_people_count(int count)
+{
+    s_st.known_people_count = count;
+}
+
 void face_status_get_json(char *buf, size_t buflen)
 {
-    const char *rs = s_robot_state_name(robot_get_state());
-    const char *ls = led_state_name(led_get_state());
+    const char *rs  = s_robot_state_name(robot_get_state());
+    const char *ls  = led_state_name(led_get_state());
+    enroll_status_t enr = face_enroll_get_status();
+    const char *es  = enr.active ? "active" : "idle";
 
     snprintf(buf, buflen,
              "{\"face_present\":%s,\"recognized\":%s,"
@@ -108,7 +124,10 @@ void face_status_get_json(char *buf, size_t buflen)
              "\"audio_file\":\"%s\",\"confidence\":%.2f,"
              "\"recognition_available\":%s,"
              "\"robot_state\":\"%s\",\"led_state\":\"%s\","
-             "\"last_audio\":\"%s\"}",
+             "\"enrollment_state\":\"%s\","
+             "\"last_audio\":\"%s\","
+             "\"last_error\":\"%s\","
+             "\"known_people_count\":%d}",
              s_st.face_present          ? "true" : "false",
              s_st.recognized            ? "true" : "false",
              s_st.person_id,
@@ -118,5 +137,30 @@ void face_status_get_json(char *buf, size_t buflen)
              s_st.recognition_available ? "true" : "false",
              rs,
              ls,
-             s_st.last_audio);
+             es,
+             s_st.last_audio,
+             s_st.last_error,
+             s_st.known_people_count);
 }
+
+#ifdef ROBOT_MOCK_MODE
+void face_status_set_mock(const char *scenario)
+{
+    if (!scenario) return;
+
+    if (strcmp(scenario, "no_face") == 0) {
+        face_status_set_no_face();
+    } else if (strcmp(scenario, "face") == 0) {
+        face_status_set_detected();
+    } else if (strcmp(scenario, "recognized") == 0) {
+        face_status_set_detected();
+        face_status_set_recognition_result(true, "apa", "Apa",
+            "file://sdcard/APA.MP3", 0.92f);
+    } else if (strcmp(scenario, "speaking") == 0) {
+        face_status_set_detected();
+        face_status_set_recognition_result(true, "apa", "Apa",
+            "file://sdcard/APA.MP3", 0.92f);
+    }
+    /* "enrollment" scenario is handled at the caller level via face_enroll_start_json */
+}
+#endif

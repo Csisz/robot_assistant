@@ -24,10 +24,23 @@ void face_status_set_recognition_result(bool recognized,
 /* Track the last audio file that was played (button press or recognition). */
 void face_status_set_last_audio(const char *audio_file);
 
-/* Fill buf with a JSON object suitable for GET /status.
-   Includes live robot_state and led_state derived from robot_get_state()
-   and led_get_state().  buf must be at least 512 bytes. */
+/* Set a human-readable error string shown in /status (empty string clears). */
+void face_status_set_last_error(const char *err);
+
+/* Set how many persons are enrolled in the recognition DB (from face_recog_init). */
+void face_status_set_known_people_count(int count);
+
+/* Fill buf with a JSON object for GET /status.
+   Includes live robot_state, led_state, and enrollment_state.
+   buf must be at least 1024 bytes. */
 void face_status_get_json(char *buf, size_t buflen);
+
+/* Inject a mock detection scenario for UI testing (only meaningful when
+   ROBOT_MOCK_MODE is defined and the /api/mock/state endpoint is hit).
+   scenario: "no_face" | "face" | "recognized" | "speaking" */
+#ifdef ROBOT_MOCK_MODE
+void face_status_set_mock(const char *scenario);
+#endif
 
 #ifdef __cplusplus
 }

@@ -147,33 +147,99 @@ static void face_detect_task(void *arg)
     /* Allow camera + web server to fully settle before the first inference */
     vTaskDelay(pdMS_TO_TICKS(3000));
 
+    ESP_LOGI(TAG, "face_detect: PSRAM before detector init: %u B (%.1f MB)",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+             heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
+
     if (face_detect_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Face detector unavailable — task exiting");
-        /* Signal demo task so it does not wait indefinitely */
+        ESP_LOGE(TAG, "face_detect: detector init FAILED — task exiting");
+        ESP_LOGE(TAG, "face_detect: PSRAM free: %u B (%.1f MB)",
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                 heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
         s_face_detect_ready = true;
         vTaskDelete(NULL);
         return;
     }
 
-    /* Init recognition after detector (stubs: instant; real impl: loads DB features) */
+    ESP_LOGI(TAG, "face_detect: detector ready — PSRAM after: %u B (%.1f MB)",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+             heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
+
+    /* Face recognition is temporarily disabled while debugging detection.
+       Re-enable once detection is confirmed working.
+       known_people_count is still populated from DB.TXT by face_recog_init(). */
+#if 0
     face_recog_init();
     face_status_set_recognition_available(face_recog_available());
+#else
+    ESP_LOGI(TAG, "face_detect: recognition DISABLED for detection debug");
+    face_status_set_recognition_available(false);
+#endif
+    face_status_set_known_people_count(face_recog_get_known_count());
 
-    /* Unblock the demo task — model is loaded, SD-card reads are now safe */
+    /* Unblock demo task — detector model loaded, SD-card safe */
     s_face_detect_ready = true;
+
+    ESP_LOGI(TAG, "=== Face detection ready ===");
+    ESP_LOGI(TAG, "  Detector ready   : %s", face_detect_is_ready() ? "YES" : "NO");
+    ESP_LOGI(TAG, "  Known people(DB) : %d", face_recog_get_known_count());
+    ESP_LOGI(TAG, "  PSRAM free       : %u B (%.1f MB)",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+             heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
+    ESP_LOGI(TAG, "============================");
+
+    /* ------------------------------------------------------------------ */
+    /* Pixel-mode auto-probe: test RGB565BE and RGB565LE on real frames.  */
+    /* Uses face_detect_run_ex2() so global s_byte_swap is not touched    */
+    /* until a winner is confirmed.  Falls back to BE (normal) if tie.    */
+    /* DL_IMAGE_PIX_TYPE_RGB565LE=9  DL_IMAGE_PIX_TYPE_RGB565BE=10        */
+    /* ------------------------------------------------------------------ */
+    {
+        int be_hits = 0, le_hits = 0;
+        for (int p = 0; p < 5; p++) {
+            camera_fb_t *pfb = NULL;
+            if (camera_capture_frame(&pfb) != ESP_OK || !pfb) {
+                vTaskDelay(pdMS_TO_TICKS(500)); continue;
+            }
+            int pw = (int)pfb->width, ph = (int)pfb->height;
+            size_t plen = pfb->len;
+            uint16_t *pf = (uint16_t *)heap_caps_malloc(plen,
+                               MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+            if (pf) memcpy(pf, pfb->buf, plen);
+            camera_release_frame(pfb);
+            if (!pf) { vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
+            int be = face_detect_run_ex2(pf, pw, ph, 10 /* RGB565BE */, NULL);
+            int le = face_detect_run_ex2(pf, pw, ph,  9 /* RGB565LE */, NULL);
+            free(pf);
+
+            ESP_LOGI(TAG, "face_detect: probe %d/5 (%dx%d %zuB) BE=%d LE=%d",
+                     p + 1, pw, ph, plen, be, le);
+            be_hits += (be > 0 ? 1 : 0);
+            le_hits += (le > 0 ? 1 : 0);
+            vTaskDelay(pdMS_TO_TICKS(500));
+        }
+        bool use_swap = (le_hits > be_hits);
+        face_detect_set_byte_swap(use_swap);
+        ESP_LOGI(TAG, "face_detect: probe done — BE_hits=%d LE_hits=%d — selected: %s",
+                 be_hits, le_hits,
+                 use_swap ? "rgb565_LE (byte_swapped)" : "rgb565_BE (normal)");
+    }
 
     bool prev_face = false;
 
     while (1) {
-        /* Skip inference while audio is playing (SDMMC DMA contention) or
-           while an enrollment capture is in progress (avoid concurrent inference). */
+        /* Skip inference while audio is playing (SDMMC DMA contention). */
         bool audio_running = (Audio_Get_Current_State() == ESP_ASP_STATE_RUNNING);
         if (robot_get_state() == ROBOT_SPEAKING || audio_running) {
-            ESP_LOGI(TAG, "face_detect: skipped while speaking");
+            ESP_LOGD(TAG, "face_detect: skipped — speaking");
             vTaskDelay(pdMS_TO_TICKS(2500));
             continue;
         }
+        /* Skip background inference when enrollment is active — Capture uses
+           face_detect_run_ex() directly and is not affected by this skip. */
         if (face_enroll_is_active()) {
+            ESP_LOGD(TAG, "face_detect: skipped — enrollment active");
             vTaskDelay(pdMS_TO_TICKS(2500));
             continue;
         }
@@ -181,15 +247,17 @@ static void face_detect_task(void *arg)
         /* --- grab frame ------------------------------------------------ */
         camera_fb_t *fb = NULL;
         if (camera_capture_frame(&fb) != ESP_OK || !fb) {
+            ESP_LOGW(TAG, "face_detect: camera capture failed");
             vTaskDelay(pdMS_TO_TICKS(2500));
             continue;
         }
 
         /* Copy RGB565 data to PSRAM so the camera buffer is freed quickly */
         size_t    data_len   = fb->len;
-        int       frame_w    = fb->width;
-        int       frame_h    = fb->height;
-        uint16_t *frame_copy = (uint16_t *)heap_caps_malloc(data_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        int       frame_w    = (int)fb->width;
+        int       frame_h    = (int)fb->height;
+        uint16_t *frame_copy = (uint16_t *)heap_caps_malloc(data_len,
+                                   MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
         if (frame_copy) {
             memcpy(frame_copy, fb->buf, data_len);
@@ -197,32 +265,35 @@ static void face_detect_task(void *arg)
         camera_release_frame(fb);   /* release mutex before slow inference */
 
         if (!frame_copy) {
-            ESP_LOGW(TAG, "PSRAM alloc failed (%zu B) — skipping frame", data_len);
+            ESP_LOGW(TAG, "face_detect: PSRAM alloc failed (%zu B) — skipping", data_len);
             vTaskDelay(pdMS_TO_TICKS(2500));
             continue;
         }
 
-        /* Second enrollment check: enrollment may have started while we held
-           the camera mutex.  Skip inference to avoid concurrent detector use. */
+        /* Second enrollment check: started while we held the camera mutex. */
         if (face_enroll_is_active()) {
             free(frame_copy);
             vTaskDelay(pdMS_TO_TICKS(2500));
             continue;
         }
 
-        /* --- detect + recognise ---------------------------------------- */
-        ESP_LOGD(TAG, "SPIRAM free before detect: %u B  Internal: %u B",
-                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
-                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
-
+        /* --- detect ---------------------------------------------------- */
+        int64_t t0 = esp_timer_get_time();
         int bbox[4]  = {0};
         int kpts[10] = {0};
         int face_count = face_detect_run_full(frame_copy, frame_w, frame_h, bbox, kpts);
+        int infer_ms = (int)((esp_timer_get_time() - t0) / 1000);
         bool face = (face_count > 0);
 
-        ESP_LOGD(TAG, "SPIRAM free after  detect: %u B  Internal: %u B",
-                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
-                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        ESP_LOGI(TAG, "face_detect: frame=%dx%d len=%zu mode=%s infer=%dms faces=%d%s",
+                 frame_w, frame_h, data_len,
+                 face_detect_get_byte_swap() ? "LE" : "BE",
+                 infer_ms, face_count,
+                 face ? " ← DETECTED" : "");
+        if (face) {
+            ESP_LOGI(TAG, "face_detect: bbox=[%d,%d,%d,%d]",
+                     bbox[0], bbox[1], bbox[2], bbox[3]);
+        }
 
         /* --- update state transitions first, then run recognition ------ */
         if (face != prev_face) {
@@ -351,4 +422,13 @@ void app_main(void)
 
     /* 11. Start demo task (waits internally for face detector to be ready) */
     xTaskCreate(robot_demo_task, "robot_demo", 4096, NULL, 5, NULL);
+
+    ESP_LOGI(TAG, "=== Startup complete ===");
+    ESP_LOGI(TAG, "  LED strip   : GPIO %d, %d LEDs", LED_STRIP_GPIO_PIN, LED_STRIP_LED_COUNT);
+    ESP_LOGI(TAG, "  SD card     : /sdcard");
+    ESP_LOGI(TAG, "  Audio       : pipeline ready");
+    ESP_LOGI(TAG, "  LCD + LVGL  : ready");
+    ESP_LOGI(TAG, "  Web server  : http://<ip>:80  (GET /  /status  /people)");
+    ESP_LOGI(TAG, "  Face detect : model loading in background task");
+    ESP_LOGI(TAG, "========================");
 }

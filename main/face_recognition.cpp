@@ -9,10 +9,17 @@
  * Recognition (called per frame from face_detect_task):
  *   Wrap the RGB565BE frame in dl::image::img_t, reconstruct dl::detect::result_t
  *   from the already-computed bbox + keypoints, then call recognize().
+ *
+ * PSRAM guard: the recognizer model can use 2–4 MB of PSRAM.  Combined with
+ * the detector model (~3–4 MB), the total may exceed what's left for inference
+ * tensor buffers, causing silent detection failures.  We therefore measure PSRAM
+ * before and after creating the recognizer; if it drops below MIN_PSRAM_RESERVE
+ * we immediately delete the recognizer so the detector can work normally.
  */
 
 #include "face_recognition.h"
 #include "face_detect.h"
+#include "face_status.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <stdio.h>
@@ -36,12 +43,45 @@
 static const char *TAG = "face_recog";
 
 /* ------------------------------------------------------------------ */
+/* DB path — needed for counting even without the recognition model   */
+/* ------------------------------------------------------------------ */
+#define DB_TXT_PATH  "/sdcard/FACES/DB.TXT"
+
+/* Always populated from DB.TXT regardless of FACE_RECOG_AVAILABLE.  */
+static int s_db_entry_count = 0;
+
+/* Count valid lines in DB.TXT; used for known_people_count in /status. */
+static int count_db_entries(void)
+{
+    FILE *f = fopen(DB_TXT_PATH, "r");
+    if (!f) return 0;
+    char line[160];
+    int n = 0;
+    while (fgets(line, sizeof(line), f)) {
+        char *nl = strchr(line, '\n'); if (nl) *nl = '\0';
+        char *cr = strchr(line, '\r'); if (cr) *cr = '\0';
+        if (!line[0] || line[0] == '#') continue;
+        char pid[16] = {0}, name[64] = {0}, afile[64] = {0};
+        int samples = 0;
+        if (sscanf(line, "%15[^,],%63[^,],%63[^,],%d",
+                   pid, name, afile, &samples) == 4 && pid[0])
+            n++;
+    }
+    fclose(f);
+    return n;
+}
+
+/* ------------------------------------------------------------------ */
 
 #if FACE_RECOG_AVAILABLE
 
-#define DB_TXT_PATH   "/sdcard/FACES/DB.TXT"
 #define DB_BIN_PATH   "/sdcard/FACES/RECOG.BIN"
 #define MAX_PERSONS   16
+
+/* Minimum PSRAM that must remain free after loading the recognizer.
+   If less than this survives, the recognizer is unloaded immediately so
+   that the detector's inference buffers can still be allocated.        */
+#define MIN_PSRAM_RESERVE  (1500UL * 1024UL)   /* 1.5 MB */
 
 struct PersonEntry {
     char     person_id[16];
@@ -152,32 +192,78 @@ extern "C" bool face_recog_available(void)
 #endif
 }
 
+extern "C" int face_recog_get_known_count(void)
+{
+    /* Always return the DB.TXT entry count, even when recognition is
+       disabled — so /status shows the correct "known_people_count". */
+    return s_db_entry_count;
+}
+
 extern "C" esp_err_t face_recog_init(void)
 {
+    /* Always count DB.TXT entries so known_people_count is correct. */
+    s_db_entry_count = count_db_entries();
+    ESP_LOGI(TAG, "DB.TXT: %d person(s) found", s_db_entry_count);
+
 #if !FACE_RECOG_AVAILABLE
     ESP_LOGW(TAG, "human_face_recognition not compiled in — recognition disabled");
     return ESP_ERR_NOT_SUPPORTED;
 #else
+    /* -------------------------------------------------------------- */
+    /* PSRAM guard: check free PSRAM before loading the recognizer.   */
+    /* The detector model already occupies 3–4 MB.  If the recognizer */
+    /* would consume the remaining headroom needed for inference       */
+    /* tensor buffers, detection silently returns 0 results.          */
+    /* -------------------------------------------------------------- */
+    size_t psram_before = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    ESP_LOGI(TAG, "PSRAM free before HumanFaceRecognizer: %u B (%.1f MB)",
+             (unsigned)psram_before, psram_before / 1048576.0f);
+
+    if (psram_before < 3UL * 1024 * 1024) {
+        ESP_LOGW(TAG, "Only %.1f MB PSRAM free — skipping HumanFaceRecognizer "
+                 "to protect face detector inference buffers.",
+                 psram_before / 1048576.0f);
+        return ESP_OK;
+    }
+
     s_recognizer = new HumanFaceRecognizer(DB_BIN_PATH);
     if (!s_recognizer) {
-        ESP_LOGE(TAG, "HumanFaceRecognizer allocation failed");
+        ESP_LOGE(TAG, "HumanFaceRecognizer allocation failed (OOM)");
         return ESP_ERR_NO_MEM;
     }
 
-    /* Start fresh so enrolled IDs are predictable (0, 1, 2, ...) */
+    size_t psram_after = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    ESP_LOGI(TAG, "PSRAM after HumanFaceRecognizer: %u B (%.1f MB)  used ~%u B",
+             (unsigned)psram_after, psram_after / 1048576.0f,
+             (unsigned)(psram_before - psram_after));
+
+    if (psram_after < MIN_PSRAM_RESERVE) {
+        ESP_LOGE(TAG, "PSRAM critically low after recognizer (%.1f MB < %.1f MB reserve) "
+                 "— deleting recognizer to restore detector headroom.",
+                 psram_after / 1048576.0f, MIN_PSRAM_RESERVE / 1048576.0f);
+        delete s_recognizer;
+        s_recognizer = nullptr;
+        size_t psram_recovered = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+        ESP_LOGI(TAG, "PSRAM after deleting recognizer: %u B (%.1f MB)",
+                 (unsigned)psram_recovered, psram_recovered / 1048576.0f);
+        return ESP_OK;
+    }
+
+    /* Recognizer loaded and PSRAM headroom OK — proceed with enrollment. */
     s_recognizer->clear_all_feats();
 
     FILE *f = fopen(DB_TXT_PATH, "r");
     if (!f) {
-        ESP_LOGW(TAG, "DB.TXT not found at %s — recognition disabled", DB_TXT_PATH);
+        ESP_LOGW(TAG, "DB.TXT not found — recognition disabled");
+        face_status_set_last_error("DB.TXT not found");
         return ESP_OK;
     }
 
     char line[160];
     while (fgets(line, sizeof(line), f) && s_num_persons < MAX_PERSONS) {
-        char *nl = strchr(line, '\n');
-        if (nl) *nl = '\0';
-        if (line[0] == '\0' || line[0] == '#') continue;
+        char *nl = strchr(line, '\n'); if (nl) *nl = '\0';
+        char *cr = strchr(line, '\r'); if (cr) *cr = '\0';
+        if (!line[0] || line[0] == '#') continue;
 
         char pid[16]   = {0};
         char name[64]  = {0};
@@ -205,7 +291,8 @@ extern "C" esp_err_t face_recog_init(void)
         ESP_LOGI(TAG, "Recognition engine ready — %d persons, %d features total",
                  s_num_persons, total);
     } else {
-        ESP_LOGW(TAG, "No faces enrolled — recognition disabled");
+        ESP_LOGW(TAG, "No faces enrolled — recognition disabled "
+                 "(persons=%d features=%d)", s_num_persons, total);
     }
 
     return ESP_OK;
@@ -227,7 +314,10 @@ extern "C" bool face_recog_run(const uint16_t *rgb565, int width, int height,
         .data     = const_cast<uint16_t *>(rgb565),
         .width    = static_cast<uint16_t>(width),
         .height   = static_cast<uint16_t>(height),
-        .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565BE,
+        /* Use the same pixel mode the detector selected at startup. */
+        .pix_type = face_detect_get_byte_swap()
+                        ? dl::image::DL_IMAGE_PIX_TYPE_RGB565LE
+                        : dl::image::DL_IMAGE_PIX_TYPE_RGB565BE,
     };
 
     dl::detect::result_t det;

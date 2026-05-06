@@ -1,46 +1,45 @@
 #include "camera_web_server.h"
 #include "face_enroll.h"
 #include "face_status.h"
+#include "face_detect.h"
 #include "robot_state.h"
+#include "led_effects.h"
 
 #include "esp_camera.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <string.h>
+#include <strings.h>   /* strcasecmp */
+#include <stdio.h>
 
 static const char *TAG = "cam_server";
 
 static httpd_handle_t    s_server  = NULL;
 static SemaphoreHandle_t s_cam_mux = NULL;
 
-/* Last successfully encoded JPEG — served as a stale frame while audio is playing
-   so that frame2jpg() never competes with SDMMC DMA during MP3 playback.
-   Owned by the httpd task; no mutex needed (single httpd task processes requests). */
+/* Last successfully encoded JPEG — served as a stale frame while audio is
+   playing so frame2jpg() never races SDMMC DMA during MP3 playback. */
 static uint8_t *s_cached_jpg     = NULL;
 static size_t   s_cached_jpg_len = 0;
 
-/* Print "skipped while speaking" at most once per speaking episode. */
 static bool s_last_was_speaking = false;
 
 /* ------------------------------------------------------------------ */
-/* Shared camera capture API (used by web server and face_detect task) */
+/* Shared camera capture API                                           */
 /* ------------------------------------------------------------------ */
 
 esp_err_t camera_capture_frame(camera_fb_t **fb)
 {
     if (!s_cam_mux) return ESP_ERR_INVALID_STATE;
-    if (xSemaphoreTake(s_cam_mux, pdMS_TO_TICKS(2000)) != pdTRUE) {
+    if (xSemaphoreTake(s_cam_mux, pdMS_TO_TICKS(2000)) != pdTRUE)
         return ESP_ERR_TIMEOUT;
-    }
     *fb = esp_camera_fb_get();
-    if (!*fb) {
-        xSemaphoreGive(s_cam_mux);
-        return ESP_FAIL;
-    }
+    if (!*fb) { xSemaphoreGive(s_cam_mux); return ESP_FAIL; }
     return ESP_OK;
-    /* Caller MUST call camera_release_frame() to release the mutex. */
 }
 
 void camera_release_frame(camera_fb_t *fb)
@@ -50,17 +49,16 @@ void camera_release_frame(camera_fb_t *fb)
 }
 
 /* ------------------------------------------------------------------ */
-/* JSON response helpers                                               */
+/* JSON helpers                                                        */
 /* ------------------------------------------------------------------ */
 
-static void send_json_ok(httpd_req_t *req, const char *extra_fields)
+static void send_json_ok(httpd_req_t *req, const char *extra)
 {
     char buf[256];
-    if (extra_fields && extra_fields[0]) {
-        snprintf(buf, sizeof(buf), "{\"ok\":true,%s}", extra_fields);
-    } else {
+    if (extra && extra[0])
+        snprintf(buf, sizeof(buf), "{\"ok\":true,%s}", extra);
+    else
         snprintf(buf, sizeof(buf), "{\"ok\":true}");
-    }
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
 }
@@ -74,11 +72,11 @@ static void send_json_error(httpd_req_t *req, const char *error)
     httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
 }
 
-/* Read up to bufsize-1 bytes of request body; null-terminates buf. */
 static int read_body(httpd_req_t *req, char *buf, size_t bufsize)
 {
     if (!req->content_len) { buf[0] = '\0'; return 0; }
-    size_t to_read = req->content_len < bufsize - 1 ? req->content_len : bufsize - 1;
+    size_t to_read = req->content_len < bufsize - 1
+                     ? req->content_len : bufsize - 1;
     int n = httpd_req_recv(req, buf, to_read);
     if (n < 0) return n;
     buf[n] = '\0';
@@ -90,138 +88,270 @@ static int read_body(httpd_req_t *req, char *buf, size_t bufsize)
 /* ------------------------------------------------------------------ */
 static const char INDEX_HTML[] =
     "<!DOCTYPE html><html><head>"
-    "<meta charset='utf-8'><title>Robot Camera</title>"
+    "<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+    "<title>Robot Assistant</title>"
     "<style>"
-    "body{background:#111;color:#eee;font-family:sans-serif;"
-    "display:flex;flex-direction:column;align-items:center;padding:20px;margin:0}"
-    "h2{margin-bottom:12px}"
-    "img{max-width:100%;border:2px solid #555;border-radius:4px}"
-    "#status{margin-top:10px;font-size:.9em;color:#aaa}"
-    ".card{background:#1e1e1e;border:1px solid #444;border-radius:8px;"
-    "padding:16px;margin-top:20px;width:100%;max-width:420px;box-sizing:border-box}"
-    ".card h3{margin:0 0 10px;font-size:.95em;color:#bbb}"
-    "label{font-size:.8em;color:#999;display:block;margin-top:6px}"
-    "input{background:#252525;border:1px solid #555;color:#eee;padding:5px 8px;"
-    "border-radius:4px;width:100%;box-sizing:border-box;margin:2px 0 4px;font-size:.9em}"
-    ".row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}"
-    "button{padding:7px 13px;border:none;border-radius:4px;cursor:pointer;"
-    "font-size:.82em;font-weight:600}"
-    ".bs{background:#2563eb;color:#fff}"
-    ".bc{background:#16a34a;color:#fff}"
-    ".bf{background:#7c3aed;color:#fff}"
-    ".bx{background:#dc2626;color:#fff}"
+    "body{background:#111;color:#eee;font-family:sans-serif;margin:0;padding:12px;"
+    "max-width:500px;margin:0 auto}"
+    "h2{text-align:center;margin:8px 0 12px;font-size:1.2em}"
+    "img{max-width:100%;border:2px solid #555;border-radius:6px;display:block;margin:0 auto}"
+    ".card{background:#1e1e1e;border:1px solid #444;border-radius:8px;padding:12px;margin:10px 0}"
+    ".card h3{margin:0 0 8px;font-size:.85em;color:#bbb;border-bottom:1px solid #333;padding-bottom:4px}"
+    "label{font-size:.78em;color:#999;display:block;margin-top:5px}"
+    "input[type=text]{background:#252525;border:1px solid #555;color:#eee;padding:5px 8px;"
+    "border-radius:4px;width:100%;box-sizing:border-box;font-size:.88em;margin:2px 0}"
+    ".row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}"
+    "button{padding:6px 11px;border:none;border-radius:4px;cursor:pointer;font-size:.8em;font-weight:600}"
+    ".bs{background:#2563eb;color:#fff}.bc{background:#16a34a;color:#fff}"
+    ".bf{background:#7c3aed;color:#fff}.bx{background:#dc2626;color:#fff}"
+    ".bn{background:#374151;color:#eee}.by{background:#b45309;color:#fff}"
     "button:disabled{opacity:.35;cursor:not-allowed}"
-    "#estat{margin-top:10px;padding:8px;background:#222;border-radius:4px;"
-    "font-size:.82em;color:#999;min-height:2em}"
+    ".msg{margin-top:7px;padding:5px 8px;background:#1a1a1a;border-radius:4px;"
+    "font-size:.78em;color:#888;min-height:1.4em}"
     ".ok{color:#4ade80}.er{color:#f87171}.warn{color:#fbbf24}"
+    "table{width:100%;font-size:.8em;border-collapse:collapse}"
+    "td{padding:3px 6px;border-bottom:1px solid #222}"
+    "td:first-child{color:#888;width:44%}"
+    "pre{background:#141414;padding:8px;border-radius:4px;font-size:.72em;"
+    "overflow:auto;max-height:180px;white-space:pre-wrap;margin:0}"
+    "#camst{text-align:center;font-size:.75em;color:#555;margin-top:3px}"
     "</style></head><body>"
-    "<h2>ESP32 Robot Camera</h2>"
-    "<img id='cam' src='/capture.jpg'>"
-    "<div id='status'>Connecting...</div>"
+    "<h2>Robot Assistant</h2>"
+
+    /* Camera */
     "<div class='card'>"
-    "<h3>Detection Status</h3>"
-    "<div id='rdet'>No face detected</div>"
-    "<div id='rinfo' style='font-size:.78em;color:#666;margin-top:4px'></div>"
+    "<h3>Camera</h3>"
+    "<img id='cam' src='/capture.jpg'>"
+    "<div id='camst'>Connecting...</div>"
     "</div>"
+
+    /* Detection & Recognition */
+    "<div class='card'>"
+    "<h3>Detection &amp; Recognition</h3>"
+    "<div id='rdet' style='font-size:.95em;padding:2px 0'>Loading...</div>"
+    "<div id='rinfo' style='font-size:.76em;color:#666;margin-top:2px'></div>"
+    "<div id='reng' style='font-size:.76em;margin-top:4px'></div>"
+    "</div>"
+
+    /* Robot State */
     "<div class='card'>"
     "<h3>Robot State</h3>"
-    "<div id='rst' style='font-size:.9em'></div>"
-    "<div id='rled' style='font-size:.78em;color:#888;margin-top:3px'></div>"
-    "<div id='rperson' style='font-size:.78em;color:#888;margin-top:3px'></div>"
-    "<div id='raudio' style='font-size:.78em;color:#888;margin-top:3px'></div>"
+    "<table>"
+    "<tr><td>State</td><td id='trst'></td></tr>"
+    "<tr><td>LED</td><td id='trled'></td></tr>"
+    "<tr><td>Enrollment</td><td id='tren'></td></tr>"
+    "<tr><td>Known people</td><td id='trkp'></td></tr>"
+    "<tr><td>Last audio</td><td id='traud'></td></tr>"
+    "<tr><td>Last error</td><td id='trerr'></td></tr>"
+    "</table>"
     "</div>"
+
+    /* Known People */
+    "<div class='card'>"
+    "<h3>Known People</h3>"
+    "<div id='plist' style='font-size:.82em'>Loading...</div>"
+    "<div class='row'>"
+    "<button class='bn' onclick='loadPeople()'>Refresh</button>"
+    "</div>"
+    "</div>"
+
+    /* Enrollment */
     "<div class='card'>"
     "<h3>Face Enrollment</h3>"
-    "<label>Person ID</label>"
-    "<input id='eid' placeholder='apa'>"
+    "<label>Person ID (A-Z, 0-9, max 8)</label>"
+    "<input id='eid' type='text' placeholder='apa'>"
     "<label>Display Name</label>"
-    "<input id='ename' placeholder='Apa'>"
-    "<label>Audio File</label>"
-    "<input id='eaudio' placeholder='/sdcard/APA.MP3'>"
+    "<input id='ename' type='text' placeholder='Apa'>"
+    "<label>Audio File (on SD card)</label>"
+    "<input id='eaudio' type='text' placeholder='/sdcard/APA.MP3'>"
     "<div class='row'>"
     "<button class='bs' id='bst' onclick='eStart()'>Start</button>"
     "<button class='bc' id='bca' onclick='eCap()' disabled>Capture</button>"
     "<button class='bf' id='bfi' onclick='eFin()' disabled>Finish</button>"
     "<button class='bx' id='bcn' onclick='eCancel()' disabled>Cancel</button>"
     "</div>"
-    "<div id='estat'>Idle</div>"
+    "<div id='estat' class='msg'>Idle</div>"
     "</div>"
+
+    /* Audio Test */
+    "<div class='card'>"
+    "<h3>Audio Test</h3>"
+    "<label>File path (must start with /sdcard/ and end with .mp3)</label>"
+    "<input id='afile' type='text' placeholder='/sdcard/APA.MP3'>"
+    "<div class='row'>"
+    "<button class='bs' onclick='playAudio()'>Play</button>"
+    "</div>"
+    "<div id='amsg' class='msg'></div>"
+    "</div>"
+
+    /* LED Test */
+    "<div class='card'>"
+    "<h3>LED Test</h3>"
+    "<div class='row'>"
+    "<button class='bn' onclick='led(\"idle\")'>Idle</button>"
+    "<button class='bs' onclick='led(\"rainbow\")'>Rainbow</button>"
+    "<button class='bc' onclick='led(\"recognized\")'>Recognized</button>"
+    "<button class='bx' onclick='led(\"error\")'>Error</button>"
+    "<button class='bf' onclick='led(\"speaking\")'>Speaking</button>"
+    "</div>"
+    "<div id='lmsg' class='msg'></div>"
+    "</div>"
+
+    /* Mock State */
+    "<div class='card'>"
+    "<h3>Mock State <span style='font-weight:normal;color:#666;font-size:.85em'>"
+    "(requires ROBOT_MOCK_MODE build flag)</span></h3>"
+    "<div class='row'>"
+    "<button class='bn' onclick='mock(\"no_face\")'>No face</button>"
+    "<button class='bn' onclick='mock(\"face\")'>Face</button>"
+    "<button class='bn' onclick='mock(\"recognized\")'>Recognized</button>"
+    "<button class='by' onclick='mock(\"speaking\")'>Speaking</button>"
+    "</div>"
+    "<div id='mmsg' class='msg'>"
+    "Recompile with -DROBOT_MOCK_MODE to enable mock injection.</div>"
+    "</div>"
+
+    /* System Diagnostics */
+    "<div class='card'>"
+    "<h3>System Diagnostics</h3>"
+    "<pre id='diag'>{}</pre>"
+    "</div>"
+
     "<script>"
-    "let ok=0,fail=0;"
+    /* Camera refresh */
+    "let cok=0,cerr=0;"
     "setInterval(()=>{"
     "  const i=new Image(),t=Date.now();"
     "  i.onload=()=>{document.getElementById('cam').src=i.src;"
-    "    document.getElementById('status').textContent='OK '+ok++;};"
-    "  i.onerror=()=>{document.getElementById('status').textContent='ERR '+fail++;};"
-    "  i.src='/capture.jpg?t='+t;"
-    "},1000);"
+    "    document.getElementById('camst').textContent='Frame OK ('+cok+')';"
+    "    cok++;};"
+    "  i.onerror=()=>{document.getElementById('camst').textContent='ERR '+cerr++;};  "
+    "  i.src='/capture.jpg?t='+t;},1000);"
+
+    /* Status poll */
+    "setInterval(async()=>{"
+    "  try{"
+    "    const d=await(await fetch('/status')).json();"
+    "    const det=document.getElementById('rdet');"
+    "    const inf=document.getElementById('rinfo');"
+    "    const eng=document.getElementById('reng');"
+    "    if(!d.face_present){"
+    "      det.textContent='No face detected';det.className='';inf.textContent='';}"
+    "    else if(!d.recognition_available){"
+    "      det.textContent='Face detected — recognition engine not available';"
+    "      det.className='warn';inf.textContent='';}"
+    "    else if(!d.recognized){"
+    "      det.textContent='Face detected — unknown person';"
+    "      det.className='warn';inf.textContent='';}"
+    "    else{"
+    "      det.textContent='Recognized: '+d.display_name;"
+    "      det.className='ok';"
+    "      inf.textContent='ID: '+d.person_id"
+    "        +'  |  Confidence: '+Math.round(d.confidence*100)+'%';}"
+    "    eng.textContent=(d.recognition_available?'✓ Recognition engine ready'"
+    "      :'✗ Recognition engine not available')"
+    "      +'  |  Known: '+d.known_people_count;"
+    "    eng.className=d.recognition_available?'ok':'er';"
+    "    document.getElementById('trst').textContent=d.robot_state||'';"
+    "    document.getElementById('trled').textContent=d.led_state||'';"
+    "    document.getElementById('tren').textContent=d.enrollment_state||'idle';"
+    "    document.getElementById('trkp').textContent=d.known_people_count||0;"
+    "    document.getElementById('traud').textContent=d.last_audio||'—';"
+    "    const te=document.getElementById('trerr');"
+    "    te.textContent=d.last_error||'—';te.className=d.last_error?'er':'';"
+    "    document.getElementById('diag').textContent=JSON.stringify(d,null,2);"
+    "  }catch(e2){}},750);"
+
+    /* Known people */
+    "async function loadPeople(){"
+    "  const el=document.getElementById('plist');"
+    "  el.textContent='Loading...';"
+    "  try{"
+    "    const arr=await(await fetch('/people')).json();"
+    "    if(!Array.isArray(arr)||!arr.length){"
+    "      el.innerHTML=\"<span class='warn'>No people enrolled or DB.TXT missing</span>\";"
+    "      return;}"
+    "    el.innerHTML=arr.map(p=>"
+    "      '<div style=\"padding:3px 0;border-bottom:1px solid #252525\">'"
+    "      +'<b>'+(p.display_name||p.name||'?')+'</b>'"
+    "      +' <span style=\"color:#666\">('+p.id+')</span>'"
+    "      +' — '+(p.audio_file||p.audio||'')"
+    "      +' — '+(p.sample_count||p.samples||0)+' samples</div>'"
+    "    ).join('');"
+    "  }catch(e){"
+    "    el.textContent='Error loading people ('+e.message+')';}}"
+    "loadPeople();"
+
+    /* Enrollment */
     "function enrBtn(on){"
     "  document.getElementById('bst').disabled=on;"
-    "  ['bca','bfi','bcn'].forEach(id=>{"
-    "    document.getElementById(id).disabled=!on;});"
-    "}"
-    "function stat(msg,cls){"
-    "  const e=document.getElementById('estat');"
-    "  e.textContent=msg;e.className=cls||'';}"
+    "  ['bca','bfi','bcn'].forEach(id=>document.getElementById(id).disabled=!on);}"
+    "function estat(msg,cls){"
+    "  const e=document.getElementById('estat');e.textContent=msg;e.className='msg '+(cls||'');}"
     "async function jpost(u,b){"
-    "  const opts={method:'POST'};"
-    "  if(b){opts.headers={'Content-Type':'application/json'};"
-    "    opts.body=JSON.stringify(b);}"
-    "  const r=await fetch(u,opts);"
-    "  return r.json();}"
+    "  const o={method:'POST'};"
+    "  if(b){o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(b);}"
+    "  return(await fetch(u,o)).json();}"
     "async function eStart(){"
     "  const id=document.getElementById('eid').value.trim();"
     "  const nm=document.getElementById('ename').value.trim();"
     "  const au=document.getElementById('eaudio').value.trim();"
-    "  if(!id||!nm){stat('ID and Name are required','er');return;}"
-    "  const r=await jpost('/enroll/start',{id:id,display_name:nm,audio_file:au});"
-    "  if(r.ok){enrBtn(true);stat('Enrolling '+nm+' — capture at least 3 samples','ok');}"
-    "  else stat('Error: '+r.error,'er');}"
+    "  if(!id||!nm){estat('ID and Name are required','er');return;}"
+    "  const r=await jpost('/enroll/start',{id,display_name:nm,audio_file:au});"
+    "  if(r.ok){enrBtn(true);estat('Enrolling '+nm+' — capture ≥3 samples','ok');}"
+    "  else estat('Error: '+r.error,'er');}"
     "async function eCap(){"
-    "  stat('Capturing...','');"
+    "  estat('Capturing...','');"
     "  const r=await jpost('/enroll/capture');"
-    "  if(r.ok)stat('Sample '+r.sample_count+' captured'"
-    "    +(r.sample_count<3?' — need '+(3-r.sample_count)+' more':''),'ok');"
-    "  else stat('Error: '+r.error,'er');}"
+    "  if(r.ok)estat('Sample '+r.sample_count+(r.sample_count<3"
+    "    ?' (need '+(3-r.sample_count)+' more)':''),'ok');"
+    "  else estat('Error: '+r.error,'er');}"
     "async function eFin(){"
     "  const r=await jpost('/enroll/finish');"
-    "  if(r.ok){enrBtn(false);stat('Enrollment saved: '+r.id+', samples: '+r.samples,'ok');}"
-    "  else stat('Error: '+r.error,'er');}"
+    "  if(r.ok){enrBtn(false);estat('Saved: '+r.id+', '+r.samples+' samples','ok');loadPeople();}"
+    "  else estat('Error: '+r.error,'er');}"
     "async function eCancel(){"
-    "  await jpost('/enroll/cancel');"
-    "  enrBtn(false);stat('Cancelled','');}"
+    "  await jpost('/enroll/cancel');enrBtn(false);estat('Cancelled','');}"
     "setInterval(async()=>{"
     "  try{"
     "    const s=await(await fetch('/enroll/status')).json();"
-    "    if(s.active){enrBtn(true);"
-    "      stat('Enrolling: '+s.display_name+' | Samples: '+s.sample_count"
-    "        +(s.sample_count<3?' ('+(3-s.sample_count)+' more needed)':''),'ok');}"
-    "  }catch(e){}},4000);"
-    "setInterval(async()=>{"
+    "    if(s.active){enrBtn(true);estat('Enrolling: '+s.display_name"
+    "      +' | '+s.sample_count+(s.sample_count<3"
+    "      ?' (need '+(3-s.sample_count)+' more)':''),'ok');}}"
+    "  catch(e){}},4000);"
+
+    /* Audio test — do NOT use encodeURIComponent; /sdcard/ paths are safe as-is */
+    "async function playAudio(){"
+    "  const f=document.getElementById('afile').value.trim();"
+    "  if(!f){document.getElementById('amsg').textContent='Enter a file path';return;}"
     "  try{"
-    "    const d=await(await fetch('/status')).json();"
-    "    const el=document.getElementById('rdet');"
-    "    const il=document.getElementById('rinfo');"
-    "    if(!d.face_present){"
-    "      el.textContent='No face detected';el.className='';il.textContent='';}"
-    "    else if(!d.recognition_available){"
-    "      el.textContent='Face detected — recognition not available';"
-    "      el.className='warn';il.textContent='';}"
-    "    else if(!d.recognized){"
-    "      el.textContent='Face detected — unknown person';"
-    "      el.className='warn';il.textContent='';}"
-    "    else{"
-    "      el.textContent='Recognized: '+d.display_name;"
-    "      el.className='ok';"
-    "      il.textContent='Confidence: '+Math.round(d.confidence*100)+'%  Audio: '+d.audio_file;}"
-    "    const sc={'IDLE':'','SPEAKING':'ok','THINKING':'warn','LISTENING':'ok','SLEEPING':''};"
-    "    const rst=document.getElementById('rst');"
-    "    rst.textContent='State: '+d.robot_state;"
-    "    rst.className=sc[d.robot_state]||'';"
-    "    document.getElementById('rled').textContent='LED: '+d.led_state;"
-    "    if(d.display_name)document.getElementById('rperson').textContent='Last person: '+d.display_name+(d.person_id?'  ('+d.person_id+')':'');"
-    "    if(d.last_audio)document.getElementById('raudio').textContent='Last audio: '+d.last_audio;"
-    "  }catch(e2){}},750);"
+    "    const r=await jpost('/api/play?file='+f);"
+    "    const m=document.getElementById('amsg');"
+    "    m.textContent=r.ok?'Playing: '+f:'Error: '+r.error;"
+    "    m.className='msg '+(r.ok?'ok':'er');"
+    "  }catch(e){document.getElementById('amsg').textContent='Request failed';}}"
+
+    /* LED test */
+    "async function led(s){"
+    "  try{"
+    "    const r=await jpost('/api/led/'+s);"
+    "    const m=document.getElementById('lmsg');"
+    "    m.textContent=r.ok?'LED → '+s:'Error: '+(r.error||'?');"
+    "    m.className='msg '+(r.ok?'ok':'er');"
+    "  }catch(e){}}"
+
+    /* Mock state */
+    "async function mock(s){"
+    "  const m=document.getElementById('mmsg');"
+    "  try{"
+    "    const resp=await fetch('/api/mock/state?scenario='+s,{method:'POST'});"
+    "    if(resp.status===404||resp.status===405){"
+    "      m.textContent='Not enabled — recompile with -DROBOT_MOCK_MODE';"
+    "      m.className='msg warn';return;}"
+    "    const r=await resp.json();"
+    "    m.textContent=r.ok?'Mock → '+s:'Error: '+r.error;"
+    "    m.className='msg '+(r.ok?'ok':'er');"
+    "  }catch(e){m.textContent='Request failed';m.className='msg er';}}"
     "</script></body></html>";
 
 /* ------------------------------------------------------------------ */
@@ -238,11 +368,9 @@ static esp_err_t index_handler(httpd_req_t *req)
 /* ------------------------------------------------------------------ */
 static esp_err_t capture_handler(httpd_req_t *req)
 {
-    /* While audio is playing: skip camera/JPEG work entirely to avoid
-       competing with SDMMC DMA.  Serve the last cached frame instead. */
     if (robot_is_speaking()) {
         if (!s_last_was_speaking) {
-            ESP_LOGI(TAG, "capture skipped while speaking — serving cached frame");
+            ESP_LOGI(TAG, "capture: speaking — serving cached frame");
             s_last_was_speaking = true;
         }
         if (s_cached_jpg && s_cached_jpg_len > 0) {
@@ -252,10 +380,9 @@ static esp_err_t capture_handler(httpd_req_t *req)
                                    (ssize_t)s_cached_jpg_len);
         }
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                            "robot speaking, no cached frame yet");
+                            "speaking, no cached frame");
         return ESP_FAIL;
     }
-
     s_last_was_speaking = false;
 
     camera_fb_t *fb = NULL;
@@ -263,30 +390,22 @@ static esp_err_t capture_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "capture failed");
         return ESP_FAIL;
     }
-
-    /* Second guard: audio may have started while we were grabbing the frame. */
     if (robot_is_speaking()) {
         camera_release_frame(fb);
         s_last_was_speaking = true;
-        ESP_LOGI(TAG, "capture skipped while speaking (post-grab) — serving cached frame");
         if (s_cached_jpg && s_cached_jpg_len > 0) {
             httpd_resp_set_type(req, "image/jpeg");
             httpd_resp_set_hdr(req, "Cache-Control", "no-store");
             return httpd_resp_send(req, (const char *)s_cached_jpg,
                                    (ssize_t)s_cached_jpg_len);
         }
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                            "speaking, no cached frame yet");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "speaking");
         return ESP_FAIL;
     }
 
     uint8_t *jpg_buf = NULL;
     size_t   jpg_len = 0;
     bool ok = frame2jpg(fb, 80, &jpg_buf, &jpg_len);
-
-    ESP_LOGI(TAG, "Frame %dx%d len=%zu → JPEG %zu B  ok=%d",
-             fb->width, fb->height, fb->len, jpg_len, ok);
-
     camera_release_frame(fb);
 
     if (!ok || !jpg_buf) {
@@ -294,7 +413,6 @@ static esp_err_t capture_handler(httpd_req_t *req)
         free(jpg_buf);
         return ESP_FAIL;
     }
-
     free(s_cached_jpg);
     s_cached_jpg     = jpg_buf;
     s_cached_jpg_len = jpg_len;
@@ -306,7 +424,198 @@ static esp_err_t capture_handler(httpd_req_t *req)
 }
 
 /* ------------------------------------------------------------------ */
-/* Route: GET /enroll/status                                          */
+/* Route: GET /status                                                  */
+/* ------------------------------------------------------------------ */
+static esp_err_t status_handler(httpd_req_t *req)
+{
+    char buf[1024];
+    face_status_get_json(buf, sizeof(buf));
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
+}
+
+/* ------------------------------------------------------------------ */
+/* Route: GET /people  — parse /sdcard/FACES/DB.TXT → JSON array     */
+/* ------------------------------------------------------------------ */
+static esp_err_t people_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    FILE *f = fopen("/sdcard/FACES/DB.TXT", "r");
+    if (!f) {
+        ESP_LOGI(TAG, "people_handler: DB.TXT missing -> returning []");
+        httpd_resp_send(req, "[]", 2);
+        return ESP_OK;
+    }
+
+    /* Heap-allocate: 3500 bytes on the httpd task stack would overflow it. */
+    const size_t RBUF = 3500;
+    char *resp = (char *)malloc(RBUF);
+    if (!resp) {
+        fclose(f);
+        ESP_LOGE(TAG, "people_handler: malloc failed");
+        httpd_resp_send(req, "[]", 2);
+        return ESP_OK;
+    }
+
+    size_t pos = 0;
+    resp[pos++] = '[';
+
+    char line[160];
+    bool first = true;
+    int  count = 0;
+    while (fgets(line, sizeof(line), f) && pos < RBUF - 300) {
+        char *nl = strchr(line, '\n'); if (nl) *nl = '\0';
+        char *cr = strchr(line, '\r'); if (cr) *cr = '\0';
+        if (line[0] == '\0' || line[0] == '#') continue;
+
+        char pid[16] = {0}, name[64] = {0}, afile[64] = {0};
+        int  samples = 0;
+        if (sscanf(line, "%15[^,],%63[^,],%63[^,],%d",
+                   pid, name, afile, &samples) != 4) continue;
+
+        /* Guard against NULL fields (sscanf partial match) */
+        if (!pid[0] || !name[0]) continue;
+
+        pos += snprintf(resp + pos, RBUF - pos,
+            "%s{\"id\":\"%s\",\"display_name\":\"%s\","
+            "\"audio_file\":\"%s\",\"sample_count\":%d}",
+            first ? "" : ",", pid, name, afile[0] ? afile : "", samples);
+        first = false;
+        count++;
+    }
+    fclose(f);
+
+    if (pos < RBUF - 2) {
+        resp[pos++] = ']';
+        resp[pos]   = '\0';
+    } else {
+        resp[RBUF - 2] = ']';
+        resp[RBUF - 1] = '\0';
+        pos = RBUF - 1;
+    }
+
+    ESP_LOGI(TAG, "people_handler: loaded %d people, returning JSON length %d",
+             count, (int)pos);
+    httpd_resp_send(req, resp, (ssize_t)pos);
+    free(resp);
+    return ESP_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Route: POST /api/play?file=/sdcard/FOO.MP3                        */
+/* ------------------------------------------------------------------ */
+static bool is_valid_audio_path(const char *p)
+{
+    if (!p || strncmp(p, "/sdcard/", 8) != 0) return false;
+    if (strstr(p, "..")) return false;          /* no path traversal */
+    size_t len = strlen(p);
+    if (len < 12) return false;
+    const char *e = p + len - 4;
+    return (e[0] == '.' &&
+            (e[1] == 'm' || e[1] == 'M') &&
+            (e[2] == 'p' || e[2] == 'P') &&
+            e[3] == '3');
+}
+
+static esp_err_t api_play_handler(httpd_req_t *req)
+{
+    char file_raw[80] = {0};
+
+    /* Check query string first */
+    size_t qlen = httpd_req_get_url_query_len(req);
+    if (qlen > 0 && qlen < 120) {
+        char query[128];
+        if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
+            httpd_query_key_value(query, "file", file_raw, sizeof(file_raw));
+    }
+    /* Fall back to form-encoded body */
+    if (!file_raw[0]) {
+        char body[128];
+        read_body(req, body, sizeof(body));
+        httpd_query_key_value(body, "file", file_raw, sizeof(file_raw));
+    }
+
+    if (!file_raw[0]) {
+        send_json_error(req, "missing 'file' parameter");
+        return ESP_FAIL;
+    }
+
+    /* URL-decode: encodeURIComponent('/') -> '%2F'; decode before validation */
+    char file_param[80] = {0};
+    {
+        const char *s = file_raw;
+        char *d = file_param;
+        char *end = file_param + sizeof(file_param) - 1;
+        while (*s && d < end) {
+            if (s[0] == '%' && s[1] && s[2]) {
+                char hex[3] = {s[1], s[2], '\0'};
+                *d++ = (char)strtol(hex, NULL, 16);
+                s += 3;
+            } else {
+                *d++ = *s++;
+            }
+        }
+        *d = '\0';
+    }
+
+    if (!is_valid_audio_path(file_param)) {
+        ESP_LOGW(TAG, "api_play: rejected path '%s' (raw='%s')", file_param, file_raw);
+        send_json_error(req, "invalid path: must start with /sdcard/ and end with .mp3 or .MP3");
+        return ESP_FAIL;
+    }
+
+    /* /sdcard/APA.MP3 → file://sdcard/APA.MP3 */
+    char url[88];
+    snprintf(url, sizeof(url), "file://sdcard/%s", file_param + 8);
+
+    face_status_set_last_audio(file_param);
+    robot_say_file("Audio test", url);
+
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Routes: POST /api/led/<state>                                      */
+/* ------------------------------------------------------------------ */
+#define LED_TEST_TICKS 60   /* 60 × 50 ms = 3 s */
+
+static esp_err_t api_led_idle_handler(httpd_req_t *req)
+{
+    led_test_force(LED_IDLE, LED_TEST_TICKS);
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+static esp_err_t api_led_rainbow_handler(httpd_req_t *req)
+{
+    led_test_force(LED_SPEAKING, LED_TEST_TICKS);   /* rainbow = SPEAKING animation */
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+static esp_err_t api_led_speaking_handler(httpd_req_t *req)
+{
+    led_test_force(LED_SPEAKING, LED_TEST_TICKS);
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+static esp_err_t api_led_recognized_handler(httpd_req_t *req)
+{
+    led_set_state(LED_RECOGNIZED);
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+static esp_err_t api_led_error_handler(httpd_req_t *req)
+{
+    led_set_state(LED_ERROR);
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Routes: GET /enroll/status  POST /enroll/start|capture|finish|cancel */
 /* ------------------------------------------------------------------ */
 static esp_err_t enroll_status_handler(httpd_req_t *req)
 {
@@ -320,94 +629,51 @@ static esp_err_t enroll_status_handler(httpd_req_t *req)
     return httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
 }
 
-/* ------------------------------------------------------------------ */
-/* Route: POST /enroll/start                                          */
-/* Body: {"id":"apa","display_name":"Apa","audio_file":"/sdcard/..."}*/
-/* ------------------------------------------------------------------ */
 static esp_err_t enroll_start_handler(httpd_req_t *req)
 {
     char body[512];
-    int n = read_body(req, body, sizeof(body));
-    if (n < 0) {
-        send_json_error(req, "body recv failed");
-        return ESP_FAIL;
+    if (read_body(req, body, sizeof(body)) < 0) {
+        send_json_error(req, "body recv failed"); return ESP_FAIL;
     }
-
     esp_err_t err = face_enroll_start_json(body);
     if (err == ESP_ERR_INVALID_ARG) {
-        send_json_error(req, "invalid JSON or missing id/display_name");
-        return ESP_FAIL;
+        send_json_error(req, "invalid JSON or missing id/display_name"); return ESP_FAIL;
     }
-    if (err != ESP_OK) {
-        send_json_error(req, "start failed");
-        return ESP_FAIL;
-    }
+    if (err != ESP_OK) { send_json_error(req, "start failed"); return ESP_FAIL; }
     send_json_ok(req, NULL);
     return ESP_OK;
 }
 
-/* ------------------------------------------------------------------ */
-/* Route: POST /enroll/capture                                        */
-/* ------------------------------------------------------------------ */
 static esp_err_t enroll_capture_handler(httpd_req_t *req)
 {
     int count = 0;
     esp_err_t err = face_enroll_capture(&count);
-
-    if (err == ESP_ERR_NOT_SUPPORTED) {
-        send_json_error(req, "Maximum samples reached");
-        return ESP_FAIL;
-    }
-    if (err == ESP_ERR_NOT_FOUND) {
-        send_json_error(req, "no face detected");
-        return ESP_FAIL;
-    }
-    if (err == ESP_ERR_INVALID_STATE) {
-        send_json_error(req, "multiple faces, audio playing, or not in enrollment mode");
-        return ESP_FAIL;
-    }
-    if (err == ESP_ERR_NO_MEM) {
-        send_json_error(req, "out of memory");
-        return ESP_FAIL;
-    }
-    if (err != ESP_OK) {
-        send_json_error(req, "capture or SD write failed");
-        return ESP_FAIL;
-    }
-
+    if (err == ESP_ERR_NOT_SUPPORTED)  { send_json_error(req, "maximum samples reached"); return ESP_FAIL; }
+    if (err == ESP_ERR_NOT_FOUND)      { send_json_error(req, "no face detected"); return ESP_FAIL; }
+    if (err == ESP_ERR_INVALID_STATE)  { send_json_error(req, "audio playing or not enrolling"); return ESP_FAIL; }
+    if (err == ESP_ERR_NO_MEM)         { send_json_error(req, "out of memory"); return ESP_FAIL; }
+    if (err != ESP_OK)                 { send_json_error(req, "capture or SD write failed"); return ESP_FAIL; }
     char extra[48];
     snprintf(extra, sizeof(extra), "\"sample_count\":%d", count);
     send_json_ok(req, extra);
     return ESP_OK;
 }
 
-/* ------------------------------------------------------------------ */
-/* Route: POST /enroll/finish                                         */
-/* ------------------------------------------------------------------ */
 static esp_err_t enroll_finish_handler(httpd_req_t *req)
 {
     int  samples = 0;
     char id[32]  = {0};
-
     esp_err_t err = face_enroll_finish(&samples, id, sizeof(id));
     if (err == ESP_ERR_INVALID_STATE) {
-        send_json_error(req, "not enrolling or need at least 3 samples");
-        return ESP_FAIL;
+        send_json_error(req, "not enrolling or need at least 3 samples"); return ESP_FAIL;
     }
-    if (err != ESP_OK) {
-        send_json_error(req, "failed to save DB.TXT");
-        return ESP_FAIL;
-    }
-
+    if (err != ESP_OK) { send_json_error(req, "failed to save DB.TXT"); return ESP_FAIL; }
     char extra[80];
     snprintf(extra, sizeof(extra), "\"samples\":%d,\"id\":\"%s\"", samples, id);
     send_json_ok(req, extra);
     return ESP_OK;
 }
 
-/* ------------------------------------------------------------------ */
-/* Route: POST /enroll/cancel                                         */
-/* ------------------------------------------------------------------ */
 static esp_err_t enroll_cancel_handler(httpd_req_t *req)
 {
     face_enroll_cancel();
@@ -416,13 +682,188 @@ static esp_err_t enroll_cancel_handler(httpd_req_t *req)
 }
 
 /* ------------------------------------------------------------------ */
-/* Route: GET /status                                                  */
+/* Route: POST /api/mock/state?scenario=...  (ROBOT_MOCK_MODE only)  */
 /* ------------------------------------------------------------------ */
-static esp_err_t status_handler(httpd_req_t *req)
+#ifdef ROBOT_MOCK_MODE
+static esp_err_t api_mock_handler(httpd_req_t *req)
 {
-    char buf[512];
-    face_status_get_json(buf, sizeof(buf));
+    char scenario[32] = {0};
+    size_t qlen = httpd_req_get_url_query_len(req);
+    if (qlen > 0 && qlen < 80) {
+        char query[96];
+        if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
+            httpd_query_key_value(query, "scenario", scenario, sizeof(scenario));
+    }
+
+    if (!scenario[0]) {
+        send_json_error(req,
+            "missing scenario: no_face | face | recognized | speaking");
+        return ESP_FAIL;
+    }
+
+    face_status_set_mock(scenario);
+
+    if (strcmp(scenario, "speaking") == 0) {
+        robot_set_speaking("Mock speaking");
+        led_test_force(LED_SPEAKING, 120);   /* 6 s */
+    } else {
+        robot_set_idle();
+    }
+
+    send_json_ok(req, NULL);
+    return ESP_OK;
+}
+#endif
+
+/* ------------------------------------------------------------------ */
+/* Route: GET /debug/detect — pixel-mode probe + face count           */
+/*                                                                    */
+/* Tests all four 16-bit pixel interpretations of the current live    */
+/* RGB565 frame.  Uses face_detect_run_ex2() so global s_byte_swap    */
+/* is never mutated mid-test; only the winning mode is persisted.     */
+/*                                                                    */
+/* pix_type_int constants (from dl_image_define.hpp):                 */
+/*   9  = DL_IMAGE_PIX_TYPE_RGB565LE                                  */
+/*   10 = DL_IMAGE_PIX_TYPE_RGB565BE                                  */
+/*   11 = DL_IMAGE_PIX_TYPE_BGR565LE                                  */
+/*   12 = DL_IMAGE_PIX_TYPE_BGR565BE                                  */
+/* ------------------------------------------------------------------ */
+static esp_err_t debug_detect_handler(httpd_req_t *req)
+{
+    static const char *DTAG = "face_debug";
+
     httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    /* --- check detector initialisation first ------------------------- */
+    bool det_ready = face_detect_is_ready();
+    unsigned psram_free = (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+
+    if (!det_ready) {
+        char err[256];
+        snprintf(err, sizeof(err),
+            "{\"detector_ready\":false,"
+            "\"detector_error\":\"HumanFaceDetect not initialised — check serial log for OOM\","
+            "\"psram_free_bytes\":%u}", psram_free);
+        ESP_LOGE(DTAG, "/debug/detect: detector NOT ready, psram_free=%u B", psram_free);
+        httpd_resp_send(req, err, HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
+    /* --- capture live RGB565 frame ----------------------------------- */
+    camera_fb_t *fb = NULL;
+    if (camera_capture_frame(&fb) != ESP_OK || !fb) {
+        httpd_resp_send(req,
+            "{\"detector_ready\":true,\"error\":\"camera capture failed\"}",
+            HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
+    int    width    = (int)fb->width;
+    int    height   = (int)fb->height;
+    int    len      = (int)fb->len;
+    int    explen   = width * height * 2;
+    int    pixfmt   = (int)fb->format;
+
+    /* Copy to PSRAM and release camera mutex before slow inference */
+    uint16_t *frame = (uint16_t *)heap_caps_malloc(
+                          (size_t)len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (frame) memcpy(frame, fb->buf, (size_t)len);
+    camera_release_frame(fb);
+
+    if (!frame) {
+        httpd_resp_send(req,
+            "{\"detector_ready\":true,\"error\":\"PSRAM alloc failed\"}",
+            HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
+    /* --- run all four pixel-type variants ---------------------------- */
+    struct {
+        const char *name;
+        int         pix_type_int; /* maps to dl::image::pix_type_t */
+        int         face_count;
+        int         ms;
+        int         bbox[4];
+    } modes[4] = {
+        { "rgb565_BE", 10, 0, 0, {0} },   /* DL_IMAGE_PIX_TYPE_RGB565BE */
+        { "rgb565_LE", 9,  0, 0, {0} },   /* DL_IMAGE_PIX_TYPE_RGB565LE */
+        { "bgr565_LE", 11, 0, 0, {0} },   /* DL_IMAGE_PIX_TYPE_BGR565LE */
+        { "bgr565_BE", 12, 0, 0, {0} },   /* DL_IMAGE_PIX_TYPE_BGR565BE */
+    };
+
+    int best_idx   = 0;
+    int best_faces = 0;
+
+    for (int m = 0; m < 4; m++) {
+        int64_t t0 = esp_timer_get_time();
+        modes[m].face_count = face_detect_run_ex2(
+            frame, width, height, modes[m].pix_type_int, modes[m].bbox);
+        modes[m].ms = (int)((esp_timer_get_time() - t0) / 1000);
+
+        ESP_LOGI(DTAG, "  %-12s -> faces=%d  ms=%d",
+                 modes[m].name, modes[m].face_count, modes[m].ms);
+
+        if (modes[m].face_count > best_faces) {
+            best_faces = modes[m].face_count;
+            best_idx   = m;
+        }
+    }
+    free(frame);
+
+    /* Persist winning mode in s_byte_swap (only if a face was found) */
+    const char *active_mode;
+    if (best_faces > 0) {
+        bool use_swap = (modes[best_idx].pix_type_int == 9  ||   /* RGB565LE */
+                         modes[best_idx].pix_type_int == 11 ||   /* BGR565LE */
+                         modes[best_idx].pix_type_int == 12);    /* BGR565BE */
+        face_detect_set_byte_swap(use_swap);
+        active_mode = modes[best_idx].name;
+        ESP_LOGI(DTAG, "Selected mode: %s (face_detect byte_swap=%d)",
+                 active_mode, (int)use_swap);
+    } else {
+        active_mode = face_detect_get_byte_swap() ? "rgb565_LE" : "rgb565_BE";
+        ESP_LOGI(DTAG, "No face detected in any mode — keeping current: %s", active_mode);
+    }
+
+    /* --- build JSON response ----------------------------------------- */
+    char buf[1200];
+    int  pos = 0;
+
+    pos += snprintf(buf + pos, sizeof(buf) - pos,
+        "{\"detector_ready\":true,"
+        "\"width\":%d,\"height\":%d,"
+        "\"frame_len\":%d,\"expected_len\":%d,"
+        "\"pixel_format\":%d,\"psram_free_bytes\":%u,"
+        "\"face_count\":%d,"
+        "\"active_pixel_mode\":\"%s\","
+        "\"tests\":[",
+        width, height, len, explen,
+        pixfmt, psram_free,
+        best_faces, active_mode);
+
+    for (int m = 0; m < 4; m++) {
+        if (pos >= (int)sizeof(buf) - 120) break;
+        pos += snprintf(buf + pos, sizeof(buf) - pos,
+            "%s{\"mode\":\"%s\",\"pix_type\":%d,"
+            "\"face_count\":%d,\"inference_ms\":%d",
+            m ? "," : "",
+            modes[m].name, modes[m].pix_type_int,
+            modes[m].face_count, modes[m].ms);
+
+        if (modes[m].face_count > 0 && pos < (int)sizeof(buf) - 60) {
+            pos += snprintf(buf + pos, sizeof(buf) - pos,
+                ",\"bbox\":{\"x1\":%d,\"y1\":%d,\"x2\":%d,\"y2\":%d}",
+                modes[m].bbox[0], modes[m].bbox[1],
+                modes[m].bbox[2], modes[m].bbox[3]);
+        }
+        if (pos < (int)sizeof(buf) - 2) { buf[pos++] = '}'; buf[pos] = '\0'; }
+    }
+
+    if (pos < (int)sizeof(buf) - 4) {
+        pos += snprintf(buf + pos, sizeof(buf) - pos, "]}");
+    }
+
     return httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
 }
 
@@ -440,48 +881,55 @@ esp_err_t camera_web_server_start(void)
     httpd_config_t cfg  = HTTPD_DEFAULT_CONFIG();
     cfg.server_port      = 80;
     cfg.lru_purge_enable = true;
-    cfg.max_uri_handlers = 10;
+    cfg.max_uri_handlers = 22;
 
-    ESP_LOGI(TAG, "Starting HTTP server on port %d", cfg.server_port);
     if (httpd_start(&s_server, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "httpd_start failed");
         return ESP_FAIL;
     }
 
-    static const httpd_uri_t index_uri = {
-        .uri = "/", .method = HTTP_GET, .handler = index_handler,
-    };
-    static const httpd_uri_t capture_uri = {
-        .uri = "/capture.jpg", .method = HTTP_GET, .handler = capture_handler,
-    };
-    static const httpd_uri_t enroll_status_uri = {
-        .uri = "/enroll/status", .method = HTTP_GET, .handler = enroll_status_handler,
-    };
-    static const httpd_uri_t enroll_start_uri = {
-        .uri = "/enroll/start", .method = HTTP_POST, .handler = enroll_start_handler,
-    };
-    static const httpd_uri_t enroll_capture_uri = {
-        .uri = "/enroll/capture", .method = HTTP_POST, .handler = enroll_capture_handler,
-    };
-    static const httpd_uri_t enroll_finish_uri = {
-        .uri = "/enroll/finish", .method = HTTP_POST, .handler = enroll_finish_handler,
-    };
-    static const httpd_uri_t enroll_cancel_uri = {
-        .uri = "/enroll/cancel", .method = HTTP_POST, .handler = enroll_cancel_handler,
-    };
-    static const httpd_uri_t status_uri = {
-        .uri = "/status", .method = HTTP_GET, .handler = status_handler,
-    };
+    /* Static helpers to avoid stack-allocating httpd_uri_t structs */
+#define REG(uri_str, meth, fn) \
+    do { \
+        static const httpd_uri_t _u = { \
+            .uri = uri_str, .method = meth, .handler = fn, \
+        }; \
+        httpd_register_uri_handler(s_server, &_u); \
+    } while (0)
 
-    httpd_register_uri_handler(s_server, &index_uri);
-    httpd_register_uri_handler(s_server, &capture_uri);
-    httpd_register_uri_handler(s_server, &status_uri);
-    httpd_register_uri_handler(s_server, &enroll_status_uri);
-    httpd_register_uri_handler(s_server, &enroll_start_uri);
-    httpd_register_uri_handler(s_server, &enroll_capture_uri);
-    httpd_register_uri_handler(s_server, &enroll_finish_uri);
-    httpd_register_uri_handler(s_server, &enroll_cancel_uri);
+    REG("/",                HTTP_GET,  index_handler);
+    REG("/capture.jpg",     HTTP_GET,  capture_handler);
+    REG("/status",          HTTP_GET,  status_handler);
+    REG("/people",          HTTP_GET,  people_handler);
+    REG("/enroll/status",   HTTP_GET,  enroll_status_handler);
+    REG("/enroll/start",    HTTP_POST, enroll_start_handler);
+    REG("/enroll/capture",  HTTP_POST, enroll_capture_handler);
+    REG("/enroll/finish",   HTTP_POST, enroll_finish_handler);
+    REG("/enroll/cancel",   HTTP_POST, enroll_cancel_handler);
+    REG("/api/play",        HTTP_POST, api_play_handler);
+    REG("/api/led/idle",    HTTP_POST, api_led_idle_handler);
+    REG("/api/led/rainbow", HTTP_POST, api_led_rainbow_handler);
+    REG("/api/led/speaking",    HTTP_POST, api_led_speaking_handler);
+    REG("/api/led/recognized",  HTTP_POST, api_led_recognized_handler);
+    REG("/api/led/error",       HTTP_POST, api_led_error_handler);
+    REG("/debug/detect",        HTTP_GET,  debug_detect_handler);
 
-    ESP_LOGI(TAG, "Routes: GET /  GET /capture.jpg  GET /status  GET+POST /enroll/*");
+#ifdef ROBOT_MOCK_MODE
+    REG("/api/mock/state",  HTTP_POST, api_mock_handler);
+    ESP_LOGI(TAG, "Mock mode: /api/mock/state registered");
+#endif
+
+#undef REG
+
+    ESP_LOGI(TAG, "Routes registered:");
+    ESP_LOGI(TAG, "  GET  /  /capture.jpg  /status  /people");
+    ESP_LOGI(TAG, "  GET  /enroll/status");
+    ESP_LOGI(TAG, "  POST /enroll/start  /capture  /finish  /cancel");
+    ESP_LOGI(TAG, "  POST /api/play  /api/led/{idle,rainbow,speaking,recognized,error}");
+    ESP_LOGI(TAG, "  GET  /debug/detect  (pixel-mode probe + face count)");
+#ifdef ROBOT_MOCK_MODE
+    ESP_LOGI(TAG, "  POST /api/mock/state  [MOCK MODE ACTIVE]");
+#endif
+
     return ESP_OK;
 }

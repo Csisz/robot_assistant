@@ -27,6 +27,11 @@ led_state_t led_get_state(void);
 /* Human-readable name of a LED state. */
 const char *led_state_name(led_state_t state);
 
+/* Force a specific LED pattern for approximately ticks × 50 ms.
+   Takes priority over both one-shots and continuous state — useful
+   for hardware testing via the web UI without changing robot state. */
+void led_test_force(led_state_t state, int ticks);
+
 #ifdef __cplusplus
 }
 #endif

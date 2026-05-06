@@ -18,6 +18,7 @@ typedef struct {
 /* Returns true only when a concrete face embedding model is available.
    Currently always false: espressif__human_face_recognition not installed. */
 bool face_recog_available(void);
+int  face_recog_get_known_count(void);
 
 /* Load enrolled persons and build feature database.
    Returns ESP_ERR_NOT_SUPPORTED when the embedding model is absent. */

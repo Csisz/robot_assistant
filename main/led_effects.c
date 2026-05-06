@@ -42,6 +42,9 @@ static led_strip_handle_t s_strip = NULL;
 static volatile led_state_t s_requested = LED_IDLE;
 /* Written exclusively by the LED task; read by led_get_state(). */
 static volatile led_state_t s_active    = LED_IDLE;
+/* Force-test override: set via led_test_force(), counts down each tick. */
+static volatile led_state_t s_force_state = LED_IDLE;
+static volatile int         s_force_ticks = 0;
 
 /* ---------- colour helpers ------------------------------------------------ */
 
@@ -149,7 +152,11 @@ static void led_task(void *arg)
     while (1) {
         led_state_t req = s_requested;
 
-        if (one_shot > 0) {
+        if (s_force_ticks > 0) {
+            /* Test-force override — highest priority */
+            s_active = s_force_state;
+            s_force_ticks--;
+        } else if (one_shot > 0) {
             /* mid-flight one-shot: keep current s_active, decrement counter */
             one_shot--;
         } else if (req == LED_FACE_DETECTED || req == LED_RECOGNIZED || req == LED_ERROR) {
@@ -220,6 +227,12 @@ void led_set_state(led_state_t state)
 led_state_t led_get_state(void)
 {
     return s_active;
+}
+
+void led_test_force(led_state_t state, int ticks)
+{
+    s_force_state = state;
+    s_force_ticks = ticks;
 }
 
 const char *led_state_name(led_state_t state)
