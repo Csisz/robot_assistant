@@ -199,6 +199,13 @@ extern "C" int face_recog_get_known_count(void)
     return s_db_entry_count;
 }
 
+extern "C" void face_recog_refresh_known_count(void)
+{
+    s_db_entry_count = count_db_entries();
+    ESP_LOGI(TAG, "DB.TXT: %d person(s) found (recognition model not loaded)",
+             s_db_entry_count);
+}
+
 extern "C" esp_err_t face_recog_init(void)
 {
     /* Always count DB.TXT entries so known_people_count is correct. */

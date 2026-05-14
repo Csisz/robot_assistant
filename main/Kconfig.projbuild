@@ -33,3 +33,53 @@ menu "LCD Configuration"
         bool "Set the screen to rotate 270 degrees"
     endchoice
 endmenu
+
+menu "Robot Features"
+    config ROBOT_ENABLE_KIDS_CHAT
+        bool "Enable Kids Chat mode"
+        default y
+
+    config ROBOT_ENABLE_VOICE_WEB_ROUTE
+        bool "Enable temporary web button for push-to-talk voice test"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+        default n
+
+    config ROBOT_ENABLE_FACE_DETECTION
+        bool "Enable background face detection"
+        default n
+
+    config ROBOT_ENABLE_FACE_RECOGNITION
+        bool "Enable face recognition model loading"
+        depends on ROBOT_ENABLE_FACE_DETECTION
+        default n
+
+    config ROBOT_ENABLE_FACE_ENROLLMENT
+        bool "Enable face enrollment web workflow"
+        depends on ROBOT_ENABLE_FACE_DETECTION
+        default n
+
+    config ROBOT_CHAT_BACKEND_HOST
+        string "Kids Chat backend host"
+        default "192.168.1.234"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+
+    config ROBOT_CHAT_BACKEND_PORT
+        int "Kids Chat backend port"
+        default 8000
+        depends on ROBOT_ENABLE_KIDS_CHAT
+
+    config ROBOT_CHAT_BACKEND_PATH
+        string "Kids Chat backend path"
+        default "/api/robot/chat"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+
+    config ROBOT_CHAT_DEVICE_ID
+        string "Kids Chat device id"
+        default "robot_assistant_esp32s3"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+
+    config ROBOT_CHAT_LOCALE
+        string "Kids Chat locale"
+        default "hu-HU"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+endmenu

@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot Simulator Chat</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #637083;
+      --line: #d9dee8;
+      --brand: #2563eb;
+      --soft: #eef4ff;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    main {
+      width: min(1080px, calc(100% - 28px));
+      margin: 18px auto 32px;
+      display: grid;
+      gap: 14px;
+    }
+    header, section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.35rem; }
+    h2 { margin: 0 0 10px; font-size: 1rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .muted { color: var(--muted); font-size: .9rem; }
+    .state {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fbfcff;
+      min-width: 0;
+    }
+    .pill span {
+      display: block;
+      color: var(--muted);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .pill strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: .88rem;
+      margin-top: 2px;
+    }
+    .latest {
+      display: grid;
+      gap: 9px;
+      border-left: 4px solid var(--brand);
+    }
+    .latest-row {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 8px;
+    }
+    .latest-label {
+      color: var(--muted);
+      font-weight: 750;
+      text-transform: uppercase;
+      font-size: .78rem;
+    }
+    .latest-value { overflow-wrap: anywhere; }
+    .latest-value, .message-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.55;
+    }
+    textarea {
+      width: 100%;
+      min-height: 82px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      align-items: center;
+    }
+    button {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 8px 11px;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+      background: var(--brand);
+      color: #fff;
+    }
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+    button.danger {
+      background: #fff;
+      color: var(--bad);
+      border-color: #fecaca;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    label.check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .quick { display: flex; flex-wrap: wrap; gap: 7px; }
+    .quick button {
+      background: var(--soft);
+      color: #1d4ed8;
+      border-color: #c7d7fe;
+      font-weight: 600;
+      padding: 7px 9px;
+    }
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: auto;
+      min-height: 120px;
+      overflow: visible;
+      padding-right: 4px;
+    }
+    .history.oldest { flex-direction: column-reverse; }
+    .turn {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+      background: #fff;
+    }
+    .turn.pending { border-color: #bfdbfe; }
+    .turn.error { border-color: #fecaca; }
+    .exchange-line {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+      line-height: 1.55;
+    }
+    .exchange-line:last-child { border-bottom: 0; }
+    .who {
+      font-size: .75rem;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      margin-bottom: 3px;
+    }
+    .robot .who { color: var(--ok); }
+    .robot.blocked .who { color: var(--warn); }
+    .robot.error .who, .error-text { color: var(--bad); }
+    .meta-line, .audio-debug {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+    .audio-debug span { overflow-wrap: anywhere; }
+    .audio-error { color: var(--bad); font-size: .85rem; margin-top: 6px; }
+    audio { width: 100%; margin-top: 8px; }
+    details { margin-top: 8px; }
+    pre {
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 6px;
+      padding: 10px;
+      overflow: auto;
+      max-height: 260px;
+      font-size: .78rem;
+    }
+    .status { min-height: 1.5em; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 820px) {
+      .state { grid-template-columns: 1fr; }
+      .latest-row { grid-template-columns: 1fr; }
+      main { width: min(100% - 18px, 1080px); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Robot Simulator Chat</h1>
+      <div class="muted">Backend-only test UI. This page calls <code>POST /api/robot/chat</code> and never sees the OpenAI API key.</div>
+      <div class="state">
+        <div class="pill"><span>conversation_id</span><strong id="conversationId">none</strong></div>
+        <div class="pill"><span>profile_id</span><strong id="profileId">guest</strong></div>
+        <div class="pill"><span>active_mode</span><strong id="activeMode">kids_chat</strong></div>
+        <div class="pill"><span>activity</span><strong id="activity">none</strong></div>
+        <div class="pill"><span>last_activity</span><strong id="lastActivity">none</strong></div>
+        <div class="pill"><span>activity_state</span><strong id="activityState">none</strong></div>
+        <div class="pill"><span>awaiting_input_type</span><strong id="awaitingInputType">none</strong></div>
+        <div class="pill"><span>awaiting_input_for</span><strong id="awaitingInputFor">none</strong></div>
+        <div class="pill"><span>barkoba_reason</span><strong id="barkobaReason">none</strong></div>
+        <div class="pill"><span>robot_mood</span><strong id="robotMood">happy</strong></div>
+        <div class="pill"><span>robot_action</span><strong id="robotAction">speak</strong></div>
+        <div class="pill"><span>turn_count</span><strong id="turnCount">none</strong></div>
+        <div class="pill"><span>barkoba_category</span><strong id="barkobaCategory">none</strong></div>
+        <div class="pill"><span>answer_source</span><strong id="answerSource">none</strong></div>
+        <div class="pill"><span>OPENAI_CHAT_MODEL</span><strong id="openaiChatModel">unknown</strong></div>
+        <div class="pill"><span>ROBOT_BARKOBA_ENGINE</span><strong id="barkobaEngine">unknown</strong></div>
+        <div class="pill"><span>ROBOT_BARKOBA_SECRET_PROVIDER</span><strong id="barkobaSecretProvider">unknown</strong></div>
+        <div class="pill"><span>ROBOT_BACKEND_MOCK</span><strong id="backendMock">unknown</strong></div>
+        <div class="pill"><span>debug_secret</span><strong id="debugSecret">hidden</strong></div>
+        <div class="pill"><span>barkoba_state</span><strong id="barkobaState">cleared</strong></div>
+        <div class="pill"><span>recent_barkoba_secrets</span><strong id="recentBarkobaSecrets">none</strong></div>
+        <div class="pill"><span>barkoba_excluded_secrets</span><strong id="barkobaExcludedSecrets">none</strong></div>
+        <div class="pill"><span>session_memory</span><strong id="sessionMemory">none</strong></div>
+      </div>
+    </header>
+
+    <section class="latest">
+      <h2>Latest robot reply</h2>
+      <div class="latest-row"><div class="latest-label">Last child message</div><div id="latestChild" class="latest-value">none</div></div>
+      <div class="latest-row"><div class="latest-label">Last robot reply</div><div id="latestRobot" class="latest-value">none</div></div>
+      <div class="latest-row"><div class="latest-label">State</div><div id="latestMeta" class="latest-value">active_mode=kids_chat</div></div>
+      <div class="latest-row"><div class="latest-label">reply_audio_url</div><div id="latestAudioUrl" class="latest-value">none</div></div>
+    </section>
+
+    <section>
+      <h2>Message</h2>
+      <textarea id="message" placeholder="Irj egy uzenetet...">Zita vagyok</textarea>
+      <div class="row">
+        <button id="sendBtn" type="button">Send</button>
+        <button id="resetBtn" type="button" class="danger">Reset conversation</button>
+        <button id="orderBtn" type="button" class="secondary">Newest first</button>
+        <label class="check"><input id="ttsToggle" type="checkbox"> Generate TTS audio</label>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Quick Tests</h2>
+      <div class="quick" id="quickButtons"></div>
+    </section>
+
+    <section>
+      <h2>Conversation Log</h2>
+      <div id="history" class="history"></div>
+    </section>
+  </main>
+
+  <script>
+    const quickMessages = [
+      "Zita vagyok",
+      "J\u00e1tsszunk bark\u00f3b\u00e1t",
+      "Szabad a gazda.",
+      "Feladom.",
+      "Ez egy \u00e1llat?",
+      "Ez egy gy\u00fcm\u00f6lcs?",
+      "Piros?",
+      "\u00c9des?",
+      "V\u00edzben \u00e9l?",
+      "H\u00fasev\u0151?",
+      "Alma?",
+      "Macska?",
+      "Vidra?",
+      "Piros ez a gy\u00fcm\u00f6lcs?",
+      "Kisebb mint a tenyerem?",
+      "Alma?",
+      "Tudsz m\u00e1sra gondolni mint az elef\u00e1ntra?",
+      "Mondj egy r\u00f6vid mes\u00e9t egy nyuszir\u00f3l",
+      "Mondj egy unikornisos mes\u00e9t",
+      "Mondj egy altat\u00f3 mes\u00e9t",
+      "Mondj egy mes\u00e9t egy b\u00e1tor kisl\u00e1nyr\u00f3l",
+      "Te k\u00e9rdezz t\u0151lem valamit",
+      "Mondj tal\u00e1l\u00f3s k\u00e9rd\u00e9st",
+      "Mondj egy gyerekviccet",
+      "Mit rajzoljak?",
+      "\u00c1llatos t\u00e9nyt k\u00e9rek",
+      "Mondj m\u00e9g egy \u00e1llatos t\u00e9nyt",
+      "Adj kreat\u00edv feladatot",
+      "Lila",
+      "K\u00e9k",
+      "S\u00e1rga",
+      "Altat\u00f3 m\u00f3d",
+      "J\u00f3 reggelt",
+      "J\u00f3 \u00e9jszak\u00e1t",
+      "Jegyezd meg, hogy a kedvenc sz\u00ednem a lila",
+      "Milyen id\u0151 v\u00e1rhat\u00f3 holnap Budapesten?",
+      "Milyen sz\u00ednt kapok, ha a z\u00f6ldet \u00e9s a s\u00e1rg\u00e1t \u00f6sszekeverem?",
+      "Hol lakom?"
+    ];
+
+    let conversationId = "";
+    let profileId = "";
+    let activeMode = "kids_chat";
+    let activity = "";
+    let lastActivity = "";
+    let activityState = {};
+    let awaitingInputType = "";
+    let awaitingInputFor = "";
+    let barkobaReason = "";
+    let robotMood = "happy";
+    let robotAction = "speak";
+    let turnCount = "";
+    let debugSecret = "";
+    let barkobaCategory = "";
+    let answerSource = "";
+    let openaiChatModel = "";
+    let barkobaEngine = "";
+    let barkobaSecretProvider = "";
+    let backendMock = "";
+    let recentBarkobaSecrets = [];
+    let barkobaExcludedSecrets = [];
+    let sessionMemory = {};
+    let newestFirst = true;
+
+    const messageEl = document.getElementById("message");
+    const sendBtn = document.getElementById("sendBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const orderBtn = document.getElementById("orderBtn");
+    const statusEl = document.getElementById("status");
+    const historyEl = document.getElementById("history");
+    const quickEl = document.getElementById("quickButtons");
+    const ttsToggle = document.getElementById("ttsToggle");
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeAudioUrl(rawUrl) {
+      if (!rawUrl) return "";
+      try {
+        const url = new URL(rawUrl, window.location.origin);
+        return url.pathname + url.search + url.hash;
+      } catch (error) {
+        console.warn("audio url normalization failed", rawUrl, error);
+        return rawUrl;
+      }
+    }
+
+    function updateState(response) {
+      if (response?.conversation_id) conversationId = response.conversation_id;
+      if (response?.profile_id) profileId = response.profile_id;
+      if (response?.active_mode) activeMode = response.active_mode;
+      activity = response?.activity || "";
+      lastActivity = response?.last_activity || lastActivity;
+      activityState = response?.activity_state || {};
+      awaitingInputType = response?.awaiting_input_type || "";
+      awaitingInputFor = response?.awaiting_input_for || "";
+      barkobaReason = response?.barkoba_reason || "";
+      robotMood = response?.robot_mood || robotMood;
+      robotAction = response?.robot_action || robotAction;
+      turnCount = response?.turn_count ?? "";
+      debugSecret = response?.debug_secret || "";
+      barkobaCategory = response?.barkoba_category || "";
+      answerSource = response?.answer_source || "";
+      openaiChatModel = response?.openai_chat_model || openaiChatModel;
+      barkobaEngine = response?.barkoba_engine || barkobaEngine;
+      barkobaSecretProvider = response?.barkoba_secret_provider || barkobaSecretProvider;
+      backendMock = response?.backend_mock ?? backendMock;
+      recentBarkobaSecrets = response?.recent_barkoba_secrets || recentBarkobaSecrets;
+      barkobaExcludedSecrets = response?.barkoba_excluded_secrets || barkobaExcludedSecrets;
+      sessionMemory = response?.session_memory || sessionMemory;
+
+      document.getElementById("conversationId").textContent = conversationId || "none";
+      document.getElementById("profileId").textContent = profileId || "guest";
+      document.getElementById("activeMode").textContent = activeMode || "kids_chat";
+      document.getElementById("activity").textContent = activity || "none";
+      document.getElementById("lastActivity").textContent = lastActivity || "none";
+      document.getElementById("activityState").textContent = Object.keys(activityState).length ? JSON.stringify(activityState) : "none";
+      document.getElementById("awaitingInputType").textContent = awaitingInputType || "none";
+      document.getElementById("awaitingInputFor").textContent = awaitingInputFor || "none";
+      document.getElementById("barkobaReason").textContent = barkobaReason || "none";
+      document.getElementById("robotMood").textContent = robotMood || "happy";
+      document.getElementById("robotAction").textContent = robotAction || "speak";
+      document.getElementById("turnCount").textContent = turnCount === "" ? "none" : String(turnCount);
+      document.getElementById("debugSecret").textContent = debugSecret || "hidden";
+      document.getElementById("barkobaCategory").textContent = barkobaCategory || "none";
+      document.getElementById("answerSource").textContent = answerSource || "none";
+      document.getElementById("openaiChatModel").textContent = openaiChatModel || "unknown";
+      document.getElementById("barkobaEngine").textContent = barkobaEngine || "unknown";
+      document.getElementById("barkobaSecretProvider").textContent = barkobaSecretProvider || "unknown";
+      document.getElementById("backendMock").textContent = backendMock === "" ? "unknown" : String(backendMock);
+      document.getElementById("barkobaState").textContent = activeMode === "barkoba" && debugSecret ? "active" : "cleared";
+      document.getElementById("recentBarkobaSecrets").textContent = recentBarkobaSecrets.length ? recentBarkobaSecrets.join(", ") : "none";
+      document.getElementById("barkobaExcludedSecrets").textContent = barkobaExcludedSecrets.length ? barkobaExcludedSecrets.join(", ") : "none";
+      document.getElementById("sessionMemory").textContent = Object.keys(sessionMemory).length ? JSON.stringify(sessionMemory) : "none";
+    }
+
+    function updateLatest(message, response) {
+      document.getElementById("latestChild").textContent = message || "none";
+      document.getElementById("latestRobot").textContent = response?.reply_text || response?.error || "none";
+      document.getElementById("latestMeta").textContent =
+        `active_mode=${response?.active_mode || activeMode || ""} reason=${response?.barkoba_reason || ""} turns=${response?.turn_count ?? ""} category=${response?.barkoba_category || ""} source=${response?.answer_source || ""}`;
+      document.getElementById("latestAudioUrl").textContent = response?.reply_audio_url || "none";
+    }
+
+    function audioHtml(response) {
+      const originalAudioUrl = response.reply_audio_url || "";
+      const browserAudioSrc = normalizeAudioUrl(originalAudioUrl);
+      if (!originalAudioUrl) return "";
+      return `
+        <audio controls preload="metadata" src="${escapeHtml(browserAudioSrc)}"></audio>
+        <div class="row">
+          <button class="secondary" type="button" data-play-audio>Play</button>
+          <a href="${escapeHtml(browserAudioSrc)}" download>Download MP3</a>
+        </div>
+        <div class="audio-debug">
+          <span>original audio URL: ${escapeHtml(originalAudioUrl)}</span>
+          <span>browser src: ${escapeHtml(browserAudioSrc)}</span>
+        </div>
+        <div class="audio-error" hidden></div>
+      `;
+    }
+
+    function renderExchange(turn, message, response, pending = false) {
+      const isError = response.ok === false || response.error;
+      const safeClass = isError ? "error" : response.safe === false ? "blocked" : "safe";
+      turn.className = `turn${pending ? " pending" : ""}${isError ? " error" : ""}`;
+      turn.innerHTML = `
+        <div class="exchange-line child">
+          <div class="who">CHILD</div>
+          <div class="message-text">${escapeHtml(message)}</div>
+        </div>
+        <div class="exchange-line robot ${safeClass}">
+          <div class="who">ROBOT</div>
+          <div class="message-text ${isError ? "error-text" : ""}">${escapeHtml(response.reply_text || response.error || "Thinking...")}</div>
+          ${audioHtml(response)}
+          <div class="meta-line">
+            <span>safe=${escapeHtml(response.safe ?? "")}</span>
+            <span>profile=${escapeHtml(response.profile_id || "")}</span>
+            <span>mode=${escapeHtml(response.active_mode || "")}</span>
+            <span>activity=${escapeHtml(response.activity || "")}</span>
+            <span>last_activity=${escapeHtml(response.last_activity || "")}</span>
+            <span>awaiting=${escapeHtml(response.awaiting_input_type || "")}/${escapeHtml(response.awaiting_input_for || "")}</span>
+            <span>mood=${escapeHtml(response.robot_mood || "")}</span>
+            <span>action=${escapeHtml(response.robot_action || "")}</span>
+            <span>reason=${escapeHtml(response.barkoba_reason || "")}</span>
+            <span>turns=${escapeHtml(response.turn_count ?? "")}</span>
+            <span>category=${escapeHtml(response.barkoba_category || "")}</span>
+            <span>source=${escapeHtml(response.answer_source || "")}</span>
+            <span>model=${escapeHtml(response.openai_chat_model || "")}</span>
+            <span>engine=${escapeHtml(response.barkoba_engine || "")}</span>
+            <span>secret_provider=${escapeHtml(response.barkoba_secret_provider || "")}</span>
+            <span>mock=${escapeHtml(response.backend_mock ?? "")}</span>
+            <span>conversation=${escapeHtml(response.conversation_id || "")}</span>
+            <span>debug_secret=${escapeHtml(response.debug_secret || "")}</span>
+            <span>recent=${escapeHtml((response.recent_barkoba_secrets || []).join(", "))}</span>
+            <span>excluded=${escapeHtml((response.barkoba_excluded_secrets || []).join(", "))}</span>
+          </div>
+          ${(response.suggested_replies || []).length ? `
+            <div class="quick">
+              ${(response.suggested_replies || []).map(reply => `<button class="secondary" type="button" data-suggested-reply="${escapeHtml(reply)}">${escapeHtml(reply)}</button>`).join("")}
+            </div>
+          ` : ""}
+          ${response.debug_barkoba_facts ? `
+            <details>
+              <summary>Debug barkoba facts</summary>
+              <pre>${escapeHtml(JSON.stringify(response.debug_barkoba_facts, null, 2))}</pre>
+            </details>
+          ` : ""}
+          <details>
+            <summary>Raw JSON</summary>
+            <pre>${escapeHtml(JSON.stringify(response, null, 2))}</pre>
+          </details>
+        </div>
+      `;
+      attachAudioHandlers(turn);
+      attachSuggestedReplyHandlers(turn);
+    }
+
+    function addExchange(message, response, pending = false) {
+      const turn = document.createElement("div");
+      renderExchange(turn, message, response, pending);
+      historyEl.prepend(turn);
+      scrollToLatest();
+      return turn;
+    }
+
+    function attachAudioHandlers(turn) {
+      const audioEl = turn.querySelector("audio");
+      const playButton = turn.querySelector("[data-play-audio]");
+      const errorEl = turn.querySelector(".audio-error");
+      if (audioEl) {
+        audioEl.addEventListener("loadedmetadata", () => {
+          console.log("audio loadedmetadata", { src: audioEl.currentSrc, duration: audioEl.duration });
+        });
+        audioEl.addEventListener("canplay", () => {
+          console.log("audio canplay", { src: audioEl.currentSrc, duration: audioEl.duration });
+        });
+        audioEl.addEventListener("error", () => {
+          console.error("audio error", audioEl.error, { src: audioEl.currentSrc, duration: audioEl.duration });
+          if (errorEl) {
+            errorEl.hidden = false;
+            errorEl.textContent = "Audio failed to load. Try the Download MP3 link or check the backend log.";
+          }
+        });
+      }
+      if (playButton && audioEl) {
+        playButton.addEventListener("click", async () => {
+          try {
+            await audioEl.play();
+          } catch (error) {
+            console.error("audio play failed", error);
+            if (errorEl) {
+              errorEl.hidden = false;
+              errorEl.textContent = `Audio play failed: ${error.message}`;
+            }
+          }
+        });
+      }
+    }
+
+    function attachSuggestedReplyHandlers(turn) {
+      for (const button of turn.querySelectorAll("[data-suggested-reply]")) {
+        button.addEventListener("click", () => {
+          const text = button.getAttribute("data-suggested-reply") || "";
+          messageEl.value = text;
+          sendMessage(text);
+        });
+      }
+    }
+
+    function scrollToLatest() {
+      historyEl.scrollTop = newestFirst ? 0 : historyEl.scrollHeight;
+    }
+
+    async function sendMessage(message) {
+      const trimmed = message.trim();
+      if (!trimmed) return;
+
+      sendBtn.disabled = true;
+      statusEl.textContent = ttsToggle.checked ? "Waiting for backend and audio..." : "Thinking...";
+      const pending = {
+        ok: true,
+        safe: true,
+        reply_text: "Thinking...",
+        active_mode: activeMode,
+        activity,
+        profile_id: profileId,
+        conversation_id: conversationId,
+        answer_source: "pending",
+        openai_chat_model: openaiChatModel,
+        barkoba_engine: barkobaEngine,
+        barkoba_secret_provider: barkobaSecretProvider,
+        backend_mock: backendMock
+      };
+      const turn = addExchange(trimmed, pending, true);
+      updateLatest(trimmed, pending);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      const body = {
+        device_id: "robot_assistant_simulator",
+        locale: "hu-HU",
+        mode: "kids_chat",
+        message: trimmed,
+        max_answer_seconds: 30,
+        tts: ttsToggle.checked
+      };
+      if (conversationId) body.conversation_id = conversationId;
+      if (profileId) body.profile_id = profileId;
+
+      try {
+        const response = await fetch("/api/robot/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          data.ok = false;
+          data.error = data.detail || `HTTP ${response.status}`;
+        }
+        updateState(data);
+        updateLatest(trimmed, data);
+        renderExchange(turn, trimmed, data, false);
+        statusEl.textContent = response.ok ? "Done" : `HTTP ${response.status}`;
+      } catch (error) {
+        const text = error.name === "AbortError" ? "Request timed out after 30 seconds" : `Request failed: ${error.message}`;
+        const data = { ok: false, safe: false, reply_text: text, error: text, active_mode: activeMode };
+        updateLatest(trimmed, data);
+        renderExchange(turn, trimmed, data, false);
+        statusEl.textContent = text;
+      } finally {
+        clearTimeout(timeout);
+        sendBtn.disabled = false;
+        scrollToLatest();
+      }
+    }
+
+    function resetConversation() {
+      conversationId = "";
+      profileId = "";
+      activeMode = "kids_chat";
+      activity = "";
+      lastActivity = "";
+      activityState = {};
+      awaitingInputType = "";
+      awaitingInputFor = "";
+      barkobaReason = "";
+      robotMood = "happy";
+      robotAction = "speak";
+      turnCount = "";
+      debugSecret = "";
+      barkobaCategory = "";
+      answerSource = "";
+      barkobaSecretProvider = "";
+      barkobaExcludedSecrets = [];
+      sessionMemory = {};
+      historyEl.innerHTML = "";
+      updateState({});
+      updateLatest("", { active_mode: "kids_chat" });
+      statusEl.textContent = "Conversation reset";
+    }
+
+    sendBtn.addEventListener("click", () => sendMessage(messageEl.value));
+    resetBtn.addEventListener("click", resetConversation);
+    orderBtn.addEventListener("click", () => {
+      newestFirst = !newestFirst;
+      historyEl.classList.toggle("oldest", !newestFirst);
+      orderBtn.textContent = newestFirst ? "Newest first" : "Oldest first";
+      scrollToLatest();
+    });
+    messageEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        sendMessage(messageEl.value);
+      }
+    });
+
+    for (const text of quickMessages) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = text;
+      button.addEventListener("click", () => {
+        messageEl.value = text;
+        sendMessage(text);
+      });
+      quickEl.appendChild(button);
+    }
+
+    updateState({});
+    updateLatest("", { active_mode: "kids_chat" });
+  </script>
+</body>
+</html>

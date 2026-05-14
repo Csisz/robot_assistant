@@ -16,6 +16,9 @@ set(SOURCES
     "./face_enroll.c"
     "./face_status.c"
     "./led_effects.c"
+    "./kids_safety.c"
+    "./robot_chat.c"
+    "./robot_voice.c"
 )
 
 set(INCLUDE_DIRS
@@ -38,6 +41,7 @@ idf_component_register(
         esp_event
         nvs_flash
         esp_http_server
+        esp_http_client
         esp_timer
         esp_lcd
         esp_driver_gpio

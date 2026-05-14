@@ -87,5 +87,9 @@ void robot_say_file(const char *text, const char *url)
     robot_face_set_text(text ? text : "");
     robot_face_set_speaking(true);
     lvgl_port_unlock();
-    Audio_Play_Music(url);
+    esp_gmf_err_t err = Audio_Play_Music(url);
+    if (err != ESP_GMF_ERR_OK) {
+        ESP_LOGE(TAG, "Audio_Play_Music failed: %d", (int)err);
+        robot_set_idle();
+    }
 }

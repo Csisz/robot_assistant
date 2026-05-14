@@ -1,5 +1,5 @@
 #include "face_enroll.h"
-#include "camera_web_server.h"
+#include "camera_driver.h"
 #include "face_detect.h"
 #include "robot_state.h"
 
@@ -194,6 +194,10 @@ void face_enroll_cancel(void)
 esp_err_t face_enroll_capture(int *sample_count_out)
 {
     if (!s_ctx.active) return ESP_ERR_INVALID_STATE;
+    if (!face_detect_is_ready()) {
+        ESP_LOGW(TAG, "Capture blocked: face detector not ready yet");
+        return ESP_ERR_INVALID_STATE;
+    }
 
     if (s_ctx.sample_count >= MAX_SAMPLES) {
         ESP_LOGW(TAG, "Already at max samples (%d)", MAX_SAMPLES);

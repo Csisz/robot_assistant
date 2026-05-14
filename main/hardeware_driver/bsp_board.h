@@ -80,7 +80,7 @@ extern "C" {
  * @brief record configurations
  *
  */
-#define RECORD_VOLUME   (30.0)
+#define RECORD_VOLUME   (42.0)
 
 /**
  * @brief player configurations

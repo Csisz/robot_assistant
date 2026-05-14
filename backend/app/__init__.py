@@ -1,0 +1,1 @@
+"""Robot Assistant backend gateway."""

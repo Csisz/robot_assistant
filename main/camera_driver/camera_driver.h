@@ -4,6 +4,9 @@
 #include "freertos/task.h"
 #include "esp_camera.h"
 #include "esp_err.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +41,45 @@ extern "C" {
 #define CAM_LEDC_CHANNEL LEDC_CHANNEL_1
 
 esp_err_t Camera_Driver_Init(void);
+
+typedef struct {
+    bool initialized;
+    bool psram_found;
+    esp_err_t init_err;
+    uint32_t init_attempts;
+    uint32_t capture_ok_count;
+    uint32_t capture_fail_count;
+    uint32_t capture_timeout_count;
+    uint32_t frames_in_flight;
+    int last_width;
+    int last_height;
+    int last_format;
+    size_t last_len;
+    int64_t last_success_us;
+    int64_t last_fail_us;
+    char last_error[80];
+    size_t psram_free;
+    size_t psram_largest_free;
+    size_t internal_free;
+    size_t internal_largest_free;
+    int xclk_freq_hz;
+    int pixel_format;
+    int frame_size;
+    int jpeg_quality;
+    int fb_count;
+    int fb_location;
+    int grab_mode;
+} camera_health_t;
+
+/* Shared camera access.
+ * camera_capture_frame() acquires the camera mutex; camera_release_frame()
+ * returns the frame and releases it. Every successful capture must be paired
+ * with exactly one release. */
+esp_err_t camera_capture_frame(camera_fb_t **fb);
+void camera_release_frame(camera_fb_t *fb);
+void camera_get_health(camera_health_t *out);
+void camera_pause_for_voice(void);
+void camera_resume_after_voice(void);
 
 #ifdef __cplusplus
 }

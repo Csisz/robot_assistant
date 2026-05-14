@@ -32,7 +32,7 @@ void face_status_set_known_people_count(int count);
 
 /* Fill buf with a JSON object for GET /status.
    Includes live robot_state, led_state, and enrollment_state.
-   buf must be at least 1024 bytes. */
+   buf must be at least 2048 bytes. */
 void face_status_get_json(char *buf, size_t buflen);
 
 /* Inject a mock detection scenario for UI testing (only meaningful when

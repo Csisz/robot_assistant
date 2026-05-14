@@ -21,8 +21,11 @@
 #include "face_status.h"
 #include "face_recognition.h"
 #include "led_effects.h"
+#include "robot_chat.h"
+#include "robot_voice.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
+#include "sdkconfig.h"
 
 static const char *TAG = "app_main";
 
@@ -30,6 +33,7 @@ static const char *TAG = "app_main";
    this before playing the startup greeting to avoid SD-card DMA contention. */
 static volatile bool s_face_detect_ready = false;
 
+#if CONFIG_ROBOT_ENABLE_FACE_DETECTION
 /* ------------------------------------------------------------------ */
 /* Greeting cooldown — 20 s per recognized person                     */
 /* ------------------------------------------------------------------ */
@@ -63,6 +67,7 @@ static bool greet_ok(const char *person_id)
     }
     return true;
 }
+#endif
 
 /* ------------------------------------------------------------------ */
 /* Audio state callback                                                */
@@ -96,8 +101,9 @@ static esp_err_t robot_camera_test(void)
         return err;
     }
 
-    camera_fb_t *fb = esp_camera_fb_get();
-    if (!fb) {
+    camera_fb_t *fb = NULL;
+    err = camera_capture_frame(&fb);
+    if (err != ESP_OK || !fb) {
         ESP_LOGE(TAG, "Camera capture failed");
         lvgl_port_lock(0);
         robot_face_set_text("Nem latok kamerat");
@@ -106,7 +112,7 @@ static esp_err_t robot_camera_test(void)
     }
 
     ESP_LOGI(TAG, "Camera frame: %dx%d fmt=%d len=%zu", fb->width, fb->height, (int)fb->format, fb->len);
-    esp_camera_fb_return(fb);
+    camera_release_frame(fb);
 
     lvgl_port_lock(0);
     robot_face_set_text("Latlak!");
@@ -122,11 +128,21 @@ static void on_key_press(key_id_t key_id, key_event_t event, void *user_data)
 {
     if (event != KEY_EVENT_SHORT_PRESS) return;
 
+#if CONFIG_ROBOT_ENABLE_KIDS_CHAT
+    if (key_id == KEY_ID_9) {
+        char error[128] = {0};
+        esp_err_t err = robot_voice_start_push_to_talk_ex(error, sizeof(error));
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "voice button request failed: %s", error[0] ? error : esp_err_to_name(err));
+        }
+        return;
+    }
+#endif
+
     const char *url = NULL;
     const char *text = NULL;
 
     switch (key_id) {
-        case KEY_ID_9:  text = "Szia Zita!";  url = "file://sdcard/ZITA.MP3";  break;
         case KEY_ID_10: text = "Szia Ida!";   url = "file://sdcard/IDA.MP3";   break;
         case KEY_ID_11: text = "Szia Zsoli!"; url = "file://sdcard/ZSOLI.MP3"; break;
         default: break;
@@ -138,6 +154,7 @@ static void on_key_press(key_id_t key_id, key_event_t event, void *user_data)
     }
 }
 
+#if CONFIG_ROBOT_ENABLE_FACE_DETECTION
 /* ------------------------------------------------------------------ */
 /* Face detection task                                                 */
 /* ------------------------------------------------------------------ */
@@ -150,6 +167,9 @@ static void face_detect_task(void *arg)
     ESP_LOGI(TAG, "face_detect: PSRAM before detector init: %u B (%.1f MB)",
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
+
+    face_recog_refresh_known_count();
+    face_status_set_known_people_count(face_recog_get_known_count());
 
     if (face_detect_init() != ESP_OK) {
         ESP_LOGE(TAG, "face_detect: detector init FAILED — task exiting");
@@ -165,14 +185,11 @@ static void face_detect_task(void *arg)
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1048576.0f);
 
-    /* Face recognition is temporarily disabled while debugging detection.
-       Re-enable once detection is confirmed working.
-       known_people_count is still populated from DB.TXT by face_recog_init(). */
-#if 0
+#if CONFIG_ROBOT_ENABLE_FACE_RECOGNITION
     face_recog_init();
     face_status_set_recognition_available(face_recog_available());
 #else
-    ESP_LOGI(TAG, "face_detect: recognition DISABLED for detection debug");
+    ESP_LOGI(TAG, "face_detect: recognition disabled by config");
     face_status_set_recognition_available(false);
 #endif
     face_status_set_known_people_count(face_recog_get_known_count());
@@ -341,6 +358,7 @@ static void face_detect_task(void *arg)
         vTaskDelay(pdMS_TO_TICKS(2500));
     }
 }
+#endif
 
 /* ------------------------------------------------------------------ */
 /* Startup demo task                                                   */
@@ -404,18 +422,54 @@ void app_main(void)
 
     /* 9. Camera init and health check */
     if (robot_camera_test() == ESP_OK) {
+#if CONFIG_ROBOT_ENABLE_FACE_DETECTION
         xTaskCreate(face_detect_task, "face_detect", 8192 * 4, NULL, 3, NULL);
+#else
+        ESP_LOGI(TAG, "Face detection auto-start disabled by config");
+        s_face_detect_ready = true;
+        face_status_set_recognition_available(false);
+#endif
     } else {
         led_set_state(LED_ERROR);
     }
 
-    /* 10. Wi-Fi + web server + enrollment */
+#if CONFIG_ROBOT_ENABLE_KIDS_CHAT
+    robot_chat_init();
+#endif
+
+    /* 10. Wi-Fi + web server + optional enrollment */
+#if CONFIG_ROBOT_ENABLE_FACE_ENROLLMENT
     face_enroll_init();
+#endif
+    face_recog_refresh_known_count();
+    face_status_set_known_people_count(face_recog_get_known_count());
+    bool web_server_ready = false;
     if (wifi_manager_start() == ESP_OK) {
-        camera_web_server_start();
-        lvgl_port_lock(0);
-        robot_face_set_text("Kamera web kesz");
-        lvgl_port_unlock();
+#if CONFIG_ROBOT_ENABLE_KIDS_CHAT
+        const char *backend_base_url = wifi_manager_backend_base_url();
+        if (backend_base_url && backend_base_url[0]) {
+            esp_err_t backend_err = robot_chat_set_backend_base_url(backend_base_url);
+            if (backend_err != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to apply WiFi backend URL: %s", esp_err_to_name(backend_err));
+            }
+        }
+#endif
+        esp_err_t web_err = camera_web_server_start();
+        if (web_err == ESP_OK) {
+            web_server_ready = true;
+            ESP_LOGI(TAG, "Web server ready");
+            lvgl_port_lock(0);
+            robot_face_set_text("Kamera web kesz");
+            lvgl_port_unlock();
+#if CONFIG_ROBOT_ENABLE_KIDS_CHAT
+            esp_err_t voice_err = robot_voice_init();
+            if (voice_err != ESP_OK) {
+                ESP_LOGW(TAG, "Voice recorder not initialized: %s", esp_err_to_name(voice_err));
+            }
+#endif
+        } else {
+            ESP_LOGE(TAG, "Web server FAILED to start: %s (%d)", esp_err_to_name(web_err), web_err);
+        }
     } else {
         ESP_LOGW(TAG, "WiFi not connected — web server skipped");
     }
@@ -428,7 +482,11 @@ void app_main(void)
     ESP_LOGI(TAG, "  SD card     : /sdcard");
     ESP_LOGI(TAG, "  Audio       : pipeline ready");
     ESP_LOGI(TAG, "  LCD + LVGL  : ready");
-    ESP_LOGI(TAG, "  Web server  : http://<ip>:80  (GET /  /status  /people)");
+    if (web_server_ready) {
+        ESP_LOGI(TAG, "  Web server  : http://<ip>:80  (GET /  /status  /people)");
+    } else {
+        ESP_LOGE(TAG, "  Web server  : FAILED to start");
+    }
     ESP_LOGI(TAG, "  Face detect : model loading in background task");
     ESP_LOGI(TAG, "========================");
 }

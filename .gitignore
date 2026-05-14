@@ -19,7 +19,11 @@ Thumbs.db
 
 # WiFi credentials — never commit the real file
 main/secrets.h
+main/wifi_secrets.h
 
 # Clangd (generated, not needed in repo)
 .clangd
 compile_commands.json
+
+.env
+*.env

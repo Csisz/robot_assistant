@@ -122,12 +122,18 @@ esp_err_t bsp_codec_adc_init(int sample_rate)
         .bits_per_sample = 32,
     };
     esp_codec_dev_open(record_dev, &fs);
-    ESP_LOGI(TAG, "ADC codec opened: sample_rate=%d", sample_rate);
+    ESP_LOGI(TAG, "ADC codec opened: sample_rate=%d channels=%d bits=%d",
+             sample_rate, fs.channel, fs.bits_per_sample);
     // esp_codec_dev_set_in_gain(record_dev, RECORD_VOLUME);
-    esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), RECORD_VOLUME);
-    esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1), RECORD_VOLUME);
-    esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(2), RECORD_VOLUME);
-    esp_codec_dev_set_in_channel_gain(record_dev, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(3), RECORD_VOLUME);
+    ESP_LOGI(TAG, "ES7210 mic gain target=%.1f for MIC1..MIC4", RECORD_VOLUME);
+    for (int ch = 0; ch < 4; ch++) {
+        esp_err_t gain_err = esp_codec_dev_set_in_channel_gain(
+            record_dev,
+            ESP_CODEC_DEV_MAKE_CHANNEL_MASK(ch),
+            RECORD_VOLUME);
+        ESP_LOGI(TAG, "ES7210 mic channel %d gain=%.1f result=%s",
+                 ch, RECORD_VOLUME, esp_err_to_name(gain_err));
+    }
 
     return ret_val;
 }

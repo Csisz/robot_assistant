@@ -1,0 +1,5 @@
+.env
+.venv/
+generated_audio/
+__pycache__/
+*.py[cod]

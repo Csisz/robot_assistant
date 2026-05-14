@@ -53,6 +53,11 @@ static int mock_event_callback(esp_asp_event_pkt_t *event, void *ctx)
         memcpy(&st, event->payload, event->payload_size);
 
         ESP_LOGI(TAG, "Get State, %d,%s", st, esp_audio_simple_player_state_to_str(st));
+        if (st == ESP_ASP_STATE_FINISHED) {
+            ESP_LOGI(TAG, "finished");
+        } else if (st == ESP_ASP_STATE_ERROR) {
+            ESP_LOGE(TAG, "playback error");
+        }
         if (s_state_cb) {
             s_state_cb(st);
         }
@@ -82,6 +87,7 @@ esp_gmf_err_t Audio_Play_Music(const char* url)
     esp_audio_simple_player_stop(handle);
     /* Restore codec volume in case Audio_PA_Mute() zeroed it during an error */
     esp_audio_set_play_vol(Volume);
+    ESP_LOGI(TAG, "playing %s", url ? url : "(null)");
     esp_gmf_err_t err = esp_audio_simple_player_run(handle, url, NULL);
     Audio_PA_EN();
     return err;
