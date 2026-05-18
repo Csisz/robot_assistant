@@ -8,15 +8,9 @@ set(SOURCES
     "./lvgl_driver/lvgl_driver.c"
     "./robot_state.c"
     "./button_driver/button_driver.c"
-    "./camera_driver/camera_driver.c"
     "./wifi_manager.c"
-    "./camera_web_server.c"
-    "./face_detect.cpp"
-    "./face_recognition.cpp"
-    "./face_enroll.c"
-    "./face_status.c"
+    "./web_server.c"
     "./led_effects.c"
-    "./kids_safety.c"
     "./robot_chat.c"
     "./robot_voice.c"
 )
@@ -29,7 +23,6 @@ set(INCLUDE_DIRS
     "./lcd_driver"
     "./lvgl_driver"
     "./button_driver"
-    "./camera_driver"
 )
 
 idf_component_register(
@@ -63,9 +56,5 @@ idf_component_register(
         espressif__gmf_audio
         espressif__esp_io_expander
         espressif__esp_io_expander_tca95xx_16bit
-        espressif__esp32-camera
-        espressif__esp-dl
-        espressif__human_face_detect
-        espressif__human_face_recognition
         espressif__led_strip
 )

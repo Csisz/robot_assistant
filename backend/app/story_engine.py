@@ -14,7 +14,7 @@ from .profiles import ChildProfile
 logger = logging.getLogger("robot_backend.story")
 
 STORY_ERROR_REPLY = "Most nem siker\u00fclt sz\u00e9pen mes\u00e9t mondanom, de pr\u00f3b\u00e1ljuk meg \u00fajra egy m\u00e1sik mes\u00e9vel."
-MAX_STORY_CHARS = 3200
+MAX_STORY_CHARS = 450
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def _story_prompt(message: str, locale: str, max_answer_seconds: int, profile: C
     logger.info("story_engine=%s profile_id=%s story_topic=%s", story_engine_name(), profile.profile_id, topic)
     return (
         "Create a child-safe short Hungarian story. Return strict JSON only with keys: "
-        '{"title":"...","story_text":"...","mood":"gentle","estimated_seconds":90}.\n'
+        '{"title":"...","story_text":"...","mood":"gentle","estimated_seconds":25}.\n'
         f"Locale: {locale}\n"
         f"Maximum answer seconds requested: {max_answer_seconds}\n"
         f"Child-safe display name: {profile.display_name}\n"
@@ -84,7 +84,8 @@ def _story_prompt(message: str, locale: str, max_answer_seconds: int, profile: C
         "Rules: Hungarian language, for young children, warm, kind, calm tone. "
         "No scary content, violence, adult topics, politics, medical or legal advice, personal data requests, "
         "secrets from parents, death, kidnapping, monsters, horror, or danger. "
-        "Default length: 8-14 short sentences, maximum 2-3 minutes. "
+        f"Default length: 4-6 short sentences, maximum {MAX_STORY_CHARS} Hungarian characters. "
+        "Prefer low latency over long expressive detail. "
         "Gentle themes: kindness, courage, friendship, patience, asking for help, sharing, curiosity."
     )
 

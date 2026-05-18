@@ -4,8 +4,8 @@ import re
 import unicodedata
 
 BLOCKED_REPLY = (
-    "Erről most nem beszélgetek, de szívesen mondok egy mesét, "
-    "adhatok rajzötletet, vagy játszhatunk egy találósat."
+    "Erről inkább ne beszéljünk, ez nem gyerekeknek való téma. "
+    "Kérdezhetsz tőlem állatokról, színekről, mesékről vagy találós kérdésekről."
 )
 
 
@@ -32,6 +32,9 @@ BLOCK_PATTERNS: list[tuple[str, str]] = [
         "secrets_from_parents",
         r"\b(ne mondd el anyanak|ne mondd el apanak|titkold|szuleid elol|secret from parents)\b",
     ),
+    ("alcohol_drugs", r"\b(alkohol|cigaretta|dohany|heroin|kokain|marihu|szivar|palinka|vodka)\b"),
+    ("self_harm", r"\b(ongyilkos|megolom magam|bajt tesz maganak|onbantalom)\b"),
+    ("hate_speech", r"\b(kurva|fasz|geci|picsa|rohadt|ribanc|takarodj)\b"),
 ]
 
 

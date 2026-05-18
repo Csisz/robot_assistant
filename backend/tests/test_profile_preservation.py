@@ -26,6 +26,7 @@ def _chat(client: TestClient, message: str, **extra: str) -> dict[str, object]:
 
 def test_invalid_incoming_profile_id_does_not_overwrite_existing_profile(monkeypatch):
     monkeypatch.setenv("ROBOT_BACKEND_MOCK", "true")
+    monkeypatch.setenv("ROBOT_STORY_ENGINE", "mock")
 
     client = TestClient(app)
 

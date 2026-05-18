@@ -1,0 +1,833 @@
+[
+  {
+    "id": "riddle_001",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Háló nélkül halászik, kéményeken tanyázik. Elköltözik, ha fázik.",
+    "answer": "gólya",
+    "accepted_answers": [
+      "gólya"
+    ],
+    "tts_text": "Háló nélkül halászik, kéményeken tanyázik. Elköltözik, ha fázik. Mi az?",
+    "answer_tts_text": "A megfejtés: gólya.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_002",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Icipici lánynak pettyes a ruhája, kezedre ül, elszáll, s csak bámulsz utána. Mi az?",
+    "answer": "katica",
+    "accepted_answers": [
+      "katica"
+    ],
+    "tts_text": "Icipici lánynak pettyes a ruhája, kezedre ül, elszáll, s csak bámulsz utána. Mi az?",
+    "answer_tts_text": "A megfejtés: katica.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_003",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Vízben élek, brekegek, ismertek-e, gyerekek? Szúnyoglábon élek, a gólyától félek. Mi az?",
+    "answer": "béka",
+    "accepted_answers": [
+      "béka"
+    ],
+    "tts_text": "Vízben élek, brekegek, ismertek-e, gyerekek? Szúnyoglábon élek, a gólyától félek. Mi az?",
+    "answer_tts_text": "A megfejtés: béka.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_004",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Szürke színű a bundája, hosszú, vékony farkincája, finom sajt a vacsorája, ravasz macska les reája. Mi az?",
+    "answer": "egér",
+    "accepted_answers": [
+      "egér"
+    ],
+    "tts_text": "Szürke színű a bundája, hosszú, vékony farkincája, finom sajt a vacsorája, ravasz macska les reája. Mi az?",
+    "answer_tts_text": "A megfejtés: egér.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_005",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Púp a hátán, de nem bánja, sivatagot körbejárja. Mi az?",
+    "answer": "teve",
+    "accepted_answers": [
+      "teve"
+    ],
+    "tts_text": "Púp a hátán, de nem bánja, sivatagot körbejárja. Mi az?",
+    "answer_tts_text": "A megfejtés: teve.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_006",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Füledbe zizegek, meg is csíplek, ha lehet. Mi az?",
+    "answer": "szúnyog",
+    "accepted_answers": [
+      "szúnyog"
+    ],
+    "tts_text": "Füledbe zizegek, meg is csíplek, ha lehet. Mi az?",
+    "answer_tts_text": "A megfejtés: szúnyog.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_007",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Éppen olyan, mint egy kefe, mégsem fésülködhetsz vele. Mi az?",
+    "answer": "süni",
+    "accepted_answers": [
+      "süni"
+    ],
+    "tts_text": "Éppen olyan, mint egy kefe, mégsem fésülködhetsz vele. Mi az?",
+    "answer_tts_text": "A megfejtés: süni.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_008",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Szépnek tart felnőtt és gyerek, pedig csúf hernyóból kelek.",
+    "answer": "lepke",
+    "accepted_answers": [
+      "lepke"
+    ],
+    "tts_text": "Szépnek tart felnőtt és gyerek, pedig csúf hernyóból kelek. Mi az?",
+    "answer_tts_text": "A megfejtés: lepke.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_009",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Éjjel, nappal hálót szövök, és azon át föl-le jövök.",
+    "answer": "pók",
+    "accepted_answers": [
+      "pók"
+    ],
+    "tts_text": "Éjjel, nappal hálót szövök, és azon át föl-le jövök. Mi az?",
+    "answer_tts_text": "A megfejtés: pók.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_010",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Tollazata színes, pompás, megismétli a mondókád: mi az?",
+    "answer": "papagáj",
+    "accepted_answers": [
+      "papagáj"
+    ],
+    "tts_text": "Tollazata színes, pompás, megismétli a mondókád: mi az?",
+    "answer_tts_text": "A megfejtés: papagáj.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_011",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Lassan vánszorogva mászom, a házamat sose látom.",
+    "answer": "csiga",
+    "accepted_answers": [
+      "csiga"
+    ],
+    "tts_text": "Lassan vánszorogva mászom, a házamat sose látom. Mi az?",
+    "answer_tts_text": "A megfejtés: csiga.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_012",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Melyik ló tud repülni?",
+    "answer": "holló",
+    "accepted_answers": [
+      "holló"
+    ],
+    "tts_text": "Melyik ló tud repülni?. Mi az?",
+    "answer_tts_text": "A megfejtés: holló.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_013",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Se hárfája, se gitárja, mégis szól a muzsikája.",
+    "answer": "tücsök",
+    "accepted_answers": [
+      "tücsök"
+    ],
+    "tts_text": "Se hárfája, se gitárja, mégis szól a muzsikája. Mi az?",
+    "answer_tts_text": "A megfejtés: tücsök.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_014",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Nincsen hangom, nem beszélek, tiszta vízben vígan élek.",
+    "answer": "hal",
+    "accepted_answers": [
+      "hal"
+    ],
+    "tts_text": "Nincsen hangom, nem beszélek, tiszta vízben vígan élek. Mi az?",
+    "answer_tts_text": "A megfejtés: hal.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_015",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Fúr-farag, de mégse ács, kopog, mint a kalapács. Fák doktora, orvosa, erdőben az otthona.",
+    "answer": "harkály",
+    "accepted_answers": [
+      "harkály"
+    ],
+    "tts_text": "Fúr-farag, de mégse ács, kopog, mint a kalapács. Fák doktora, orvosa, erdőben az otthona. Mi az?",
+    "answer_tts_text": "A megfejtés: harkály.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_016",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Ha feldobom, fehér, ha leesik sárga.",
+    "answer": "tojás",
+    "accepted_answers": [
+      "tojás"
+    ],
+    "tts_text": "Ha feldobom, fehér, ha leesik sárga. Mi az?",
+    "answer_tts_text": "A megfejtés: tojás.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_017",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Szép leányka ül a fán, piros ruha derekán, szíve olyan, mint a kő. Tudjátok, ki lehet ő?",
+    "answer": "cseresznye",
+    "accepted_answers": [
+      "cseresznye"
+    ],
+    "tts_text": "Szép leányka ül a fán, piros ruha derekán, szíve olyan, mint a kő. Tudjátok, ki lehet ő?. Mi az?",
+    "answer_tts_text": "A megfejtés: cseresznye.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_018",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Kertben élek, illatozom, én vagyok a szépek szépe. Aki letép, jól vigyázzon, tövis karcol tenyerébe!",
+    "answer": "rózsa",
+    "accepted_answers": [
+      "rózsa"
+    ],
+    "tts_text": "Kertben élek, illatozom, én vagyok a szépek szépe. Aki letép, jól vigyázzon, tövis karcol tenyerébe!. Mi az?",
+    "answer_tts_text": "A megfejtés: rózsa.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_019",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Télen fázik, mégis levetkezik, nyáron melege van, mégis felöltözik. Mi az?",
+    "answer": "fa",
+    "accepted_answers": [
+      "fa"
+    ],
+    "tts_text": "Télen fázik, mégis levetkezik, nyáron melege van, mégis felöltözik. Mi az?",
+    "answer_tts_text": "A megfejtés: fa.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_020",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Szereted, vagy nem szereted, ha megeszed- megkönnyezed.",
+    "answer": "hagyma",
+    "accepted_answers": [
+      "hagyma"
+    ],
+    "tts_text": "Szereted, vagy nem szereted, ha megeszed- megkönnyezed. Mi az?",
+    "answer_tts_text": "A megfejtés: hagyma.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_021",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Zöld istállóban, fekete lovak, piros szénát esznek.",
+    "answer": "görögdinnye",
+    "accepted_answers": [
+      "görögdinnye"
+    ],
+    "tts_text": "Zöld istállóban, fekete lovak, piros szénát esznek. Mi az?",
+    "answer_tts_text": "A megfejtés: görögdinnye.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_022",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Se ajtaja, se ablaka, mégis négyen laknak benne.",
+    "answer": "dió",
+    "accepted_answers": [
+      "dió"
+    ],
+    "tts_text": "Se ajtaja, se ablaka, mégis négyen laknak benne. Mi az?",
+    "answer_tts_text": "A megfejtés: dió.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_023",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Sötét bársony szétterül, Rajta- ezer lámpácska ül.",
+    "answer": "csillagos ég",
+    "accepted_answers": [
+      "csillagos ég"
+    ],
+    "tts_text": "Sötét bársony szétterül, Rajta- ezer lámpácska ül. Mi az?",
+    "answer_tts_text": "A megfejtés: Csillagos ég.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_024",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Ismerek két péket, De furcsák, nézzétek!",
+    "answer": "",
+    "accepted_answers": [],
+    "tts_text": "Ismerek két péket, De furcsák, nézzétek!. Mi az?",
+    "answer_tts_text": "",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_025",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Az egyik nappal süt, A másik éjjel süt, Mégsincs kenyerük.",
+    "answer": "nap és hold",
+    "accepted_answers": [
+      "nap és hold"
+    ],
+    "tts_text": "Az egyik nappal süt, A másik éjjel süt, Mégsincs kenyerük. Mi az?",
+    "answer_tts_text": "A megfejtés: Nap és Hold.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_026",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Árnyas ösvényeit nagyon sokan kedvelik, A mesékben néha kereknek is nevezik! Mi az?",
+    "answer": "erdő",
+    "accepted_answers": [
+      "erdő"
+    ],
+    "tts_text": "Árnyas ösvényeit nagyon sokan kedvelik, A mesékben néha kereknek is nevezik! Mi az?",
+    "answer_tts_text": "A megfejtés: erdő.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_027",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Éjjel-nappal mindig forog, mégse szédül el. Mi az?",
+    "answer": "föld",
+    "accepted_answers": [
+      "föld"
+    ],
+    "tts_text": "Éjjel-nappal mindig forog, mégse szédül el. Mi az?",
+    "answer_tts_text": "A megfejtés: föld.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_028",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Mikor fekszel, akkor kél, egyszer egész, máskor fél: mi az?",
+    "answer": "hold",
+    "accepted_answers": [
+      "hold"
+    ],
+    "tts_text": "Mikor fekszel, akkor kél, egyszer egész, máskor fél: mi az?",
+    "answer_tts_text": "A megfejtés: hold.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_029",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Mindennap felkel láb nélkül? Mi az?",
+    "answer": "nap",
+    "accepted_answers": [
+      "nap"
+    ],
+    "tts_text": "Mindennap felkel láb nélkül? Mi az?",
+    "answer_tts_text": "A megfejtés: nap.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_030",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Lába nincs, mégis sebesen fut.",
+    "answer": "szél",
+    "accepted_answers": [
+      "szél"
+    ],
+    "tts_text": "Lába nincs, mégis sebesen fut. Mi az?",
+    "answer_tts_text": "A megfejtés: szél.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_031",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Varázsbotja nincsen neki, de a tájat eltünteti. Mikor leszáll, azt sem tudod, merre van az orrod. Mi az?",
+    "answer": "köd",
+    "accepted_answers": [
+      "köd"
+    ],
+    "tts_text": "Varázsbotja nincsen neki, de a tájat eltünteti. Mikor leszáll, azt sem tudod, merre van az orrod. Mi az?",
+    "answer_tts_text": "A megfejtés: köd.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_032",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Nem foghatsz meg, nem is láthatsz, ha akarod, megtalálhatsz. Lehetsz felnőtt, lehetsz gyerek, veled is feleselek.",
+    "answer": "visszhang",
+    "accepted_answers": [
+      "visszhang"
+    ],
+    "tts_text": "Nem foghatsz meg, nem is láthatsz, ha akarod, megtalálhatsz. Lehetsz felnőtt, lehetsz gyerek, veled is feleselek. Mi az?",
+    "answer_tts_text": "A megfejtés: visszhang.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_033",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Hol vizet önt, hol havat int, hol jeget szór fejedre, s elszáll – pedig szárnya sincsen – nyugatra, keletre.",
+    "answer": "felhő",
+    "accepted_answers": [
+      "felhő"
+    ],
+    "tts_text": "Hol vizet önt, hol havat int, hol jeget szór fejedre, s elszáll – pedig szárnya sincsen – nyugatra, keletre. Mi az?",
+    "answer_tts_text": "A megfejtés: felhő.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_034",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Éjjel-nappal mindig jár, mégis egyhelyben áll. Mi az?",
+    "answer": "óra",
+    "accepted_answers": [
+      "óra"
+    ],
+    "tts_text": "Éjjel-nappal mindig jár, mégis egyhelyben áll. Mi az?",
+    "answer_tts_text": "A megfejtés: óra.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_035",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Egy kis házban öt kis szoba, öt kis ember bújik oda. Mi az?",
+    "answer": "kesztyű",
+    "accepted_answers": [
+      "kesztyű"
+    ],
+    "tts_text": "Egy kis házban öt kis szoba, öt kis ember bújik oda. Mi az?",
+    "answer_tts_text": "A megfejtés: kesztyű.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_036",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Foga van és mégsem eszik.",
+    "answer": "fésű",
+    "accepted_answers": [
+      "fésű"
+    ],
+    "tts_text": "Foga van és mégsem eszik. Mi az?",
+    "answer_tts_text": "A megfejtés: fésű.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_037",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Melyik tó zárható?",
+    "answer": "ajtó",
+    "accepted_answers": [
+      "ajtó"
+    ],
+    "tts_text": "Melyik tó zárható?. Mi az?",
+    "answer_tts_text": "A megfejtés: ajtó.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_038",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Négy lába van, mégsem jár, konyhában, szobában áll.",
+    "answer": "asztal",
+    "accepted_answers": [
+      "asztal"
+    ],
+    "tts_text": "Négy lába van, mégsem jár, konyhában, szobában áll. Mi az?",
+    "answer_tts_text": "A megfejtés: asztal.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_039",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Orra van, de nem szagol, nyelve is van, de nem beszél.",
+    "answer": "cipő",
+    "accepted_answers": [
+      "cipő"
+    ],
+    "tts_text": "Orra van, de nem szagol, nyelve is van, de nem beszél. Mi az?",
+    "answer_tts_text": "A megfejtés: cipő.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_040",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Van szája, és mégsem szól, ha tele van, dugd be jól.",
+    "answer": "üveg",
+    "accepted_answers": [
+      "üveg"
+    ],
+    "tts_text": "Van szája, és mégsem szól, ha tele van, dugd be jól. Mi az?",
+    "answer_tts_text": "A megfejtés: üveg.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_041",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Szádba teszed, mégsem eszed.",
+    "answer": "kanál",
+    "accepted_answers": [
+      "kanál"
+    ],
+    "tts_text": "Szádba teszed, mégsem eszed. Mi az?",
+    "answer_tts_text": "A megfejtés: kanál.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_042",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Két füle van, mégsem hall.",
+    "answer": "fazék",
+    "accepted_answers": [
+      "fazék"
+    ],
+    "tts_text": "Két füle van, mégsem hall. Mi az?",
+    "answer_tts_text": "A megfejtés: fazék.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_043",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Kis dobozban száz veszély, piros nyelve sokat ér.",
+    "answer": "gyufa",
+    "accepted_answers": [
+      "gyufa"
+    ],
+    "tts_text": "Kis dobozban száz veszély, piros nyelve sokat ér. Mi az?",
+    "answer_tts_text": "A megfejtés: gyufa.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_044",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Két kezemmel füled fogom, s ott csücsülök az orrodon.",
+    "answer": "szemüveg",
+    "accepted_answers": [
+      "szemüveg"
+    ],
+    "tts_text": "Két kezemmel füled fogom, s ott csücsülök az orrodon. Mi az?",
+    "answer_tts_text": "A megfejtés: szemüveg.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_045",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Ha rám nézel, visszanézek, ha rám nevetsz, kinevetlek. Tiszta, igaz és hű vagyok, kedvedért én nem hazudok.",
+    "answer": "tükör",
+    "accepted_answers": [
+      "tükör"
+    ],
+    "tts_text": "Ha rám nézel, visszanézek, ha rám nevetsz, kinevetlek. Tiszta, igaz és hű vagyok, kedvedért én nem hazudok. Mi az?",
+    "answer_tts_text": "A megfejtés: tükör.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_046",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Vízben síkos, kézben habos, piszkos kezet tisztára mos.",
+    "answer": "szappan",
+    "accepted_answers": [
+      "szappan"
+    ],
+    "tts_text": "Vízben síkos, kézben habos, piszkos kezet tisztára mos. Mi az?",
+    "answer_tts_text": "A megfejtés: szappan.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_047",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Akárhova vitték, mindig fejbe verték.",
+    "answer": "szeg",
+    "accepted_answers": [
+      "szeg"
+    ],
+    "tts_text": "Akárhova vitték, mindig fejbe verték. Mi az?",
+    "answer_tts_text": "A megfejtés: szeg.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_048",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Télen szalad sebesen, nyáron pihen csendesen",
+    "answer": "szánkó",
+    "accepted_answers": [
+      "szánkó"
+    ],
+    "tts_text": "Télen szalad sebesen, nyáron pihen csendesen. Mi az?",
+    "answer_tts_text": "A megfejtés: szánkó.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  },
+  {
+    "id": "riddle_049",
+    "type": "riddle",
+    "language": "hu",
+    "age_group": "kids",
+    "question": "Ide leng, oda leng, egyszer fent van, máskor lent.",
+    "answer": "hinta",
+    "accepted_answers": [
+      "hinta"
+    ],
+    "tts_text": "Ide leng, oda leng, egyszer fent van, máskor lent. Mi az?",
+    "answer_tts_text": "A megfejtés: hinta.",
+    "tags": [
+      "találós",
+      "magyar"
+    ]
+  }
+]

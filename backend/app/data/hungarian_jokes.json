@@ -1,0 +1,282 @@
+[
+  {
+    "id": "joke_001",
+    "source_number": 4,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Két hangya egy-egy kenyérmorzsát tol az úton. Arra megy az elefánt, odaszól neki az egyik hangya:\n- Fogadjunk, hogy nem tudod feltenni a fejedre ezt a kenyérmorzsát!\nAz elefánt felrakja, mire odaszól neki a másik hangya:\n- De fogadjunk, hogy nem tudsz ráállni erre a másik kenyérmorzsára!\nAz elefánt rááll, mire a két hangya fetrengve a röhögéstől:\n- Húúú, mekkora szendvics!",
+    "tts_text": "Két hangya egy egy kenyérmorzsát tol az úton. Arra megy az elefánt, odaszól neki az egyik hangya: Fogadjunk, hogy nem tudod feltenni a fejedre ezt a kenyérmorzsát! Az elefánt felrakja, mire odaszól neki a másik hangya: De fogadjunk, hogy nem tudsz ráállni erre a másik kenyérmorzsára! Az elefánt rááll, mire a két hangya fetrengve a röhögéstől: Húúú, mekkora szendvics!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_002",
+    "source_number": 8,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Egy festőművész elmegy a hegyekbe, hogy témát találjon az új festményéhez. Találkozik a pásztorral, aki a juhait tereli.\n- Lefesthetem a juhait? - kérdezi a festőművész.\n- Dehogy is! Hát ki venné meg utána az összefestett gyapjújukat?",
+    "tts_text": "Egy festőművész elmegy a hegyekbe, hogy témát találjon az új festményéhez. Találkozik a pásztorral, aki a juhait tereli. Lefesthetem a juhait? kérdezi a festőművész. Dehogy is! Hát ki venné meg utána az összefestett gyapjújukat?",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_003",
+    "source_number": 11,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Öreg néni kényelmesen elhelyezkedik a fotelben, mellette a kutyájával. Nézi a TV-t, egy vadnyugati történet van műsoron. Egyszer csak meglöki a szundikáló kutyát, és hangosan felkiált:\n- Nézz csak oda, Morzsika! Ez a cowboy nem egészen normális! Folyton a lovához beszél!",
+    "tts_text": "Öreg néni kényelmesen elhelyezkedik a fotelben, mellette a kutyájával. Nézi a TV t, egy vadnyugati történet van műsoron. Egyszer csak meglöki a szundikáló kutyát, és hangosan felkiált: Nézz csak oda, Morzsika! Ez a cowboy nem egészen normális! Folyton a lovához beszél!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_004",
+    "source_number": 13,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Megy János bácsi a szekérrel, a szekér mellett a kutyája baktat. János bácsi meg időnként rácsap a ló hátára: \"Gyí, te!\"\nEgyszer csak a ló megáll és rászól János bácsira:\n- Te János, miért ütsz annyit, én is egy érző lény vagyok, nekem is fáj…\nJános bácsi beijed a beszélő lótól, futásnak ered, a kutyaja is vele. Mikor kifárad, leül pihenni. Ekkor megszólal a kutya:\n- Húú, hogy megijedtem mikor megszólalt a ló!",
+    "tts_text": "Megy János bácsi a szekérrel, a szekér mellett a kutyája baktat. János bácsi meg időnként rácsap a ló hátára: \"Gyí, te!\" Egyszer csak a ló megáll és rászól János bácsira: Te János, miért ütsz annyit, én is egy érző lény vagyok, nekem is fáj… János bácsi beijed a beszélő lótól, futásnak ered, a kutyaja is vele. Mikor kifárad, leül pihenni. Ekkor megszólal a kutya: Húú, hogy megijedtem mikor megszólalt a ló!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_005",
+    "source_number": 14,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "- Melyik a legősibb állat a világon?\n- ??\n- A pingvin, mert az még fekete-fehér.",
+    "tts_text": "Melyik a legősibb állat a világon? ?? A pingvin, mert az még fekete fehér.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_006",
+    "source_number": 15,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "- Miért nincs a halnak haja?\n- Mert sosem tudná megszárítani…",
+    "tts_text": "Miért nincs a halnak haja? Mert sosem tudná megszárítani…",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_007",
+    "source_number": 16,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Egyik reggel a százlábút megszólítja a szomszédja, a tücsök:\n- Jó napot, kedves százlábú szomszéd! Hol van a kedves felesége? Már napok óta nem láttam?\n- Elment cipőt vásárolni…",
+    "tts_text": "Egyik reggel a százlábút megszólítja a szomszédja, a tücsök: Jó napot, kedves százlábú szomszéd! Hol van a kedves felesége? Már napok óta nem láttam? Elment cipőt vásárolni…",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_008",
+    "source_number": 18,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "A kismalac elindul új állatokat megismerni. Találkozik az öszvérrel.\n- Szia, én vagyok a kismalac, téged hogy hívnak?\n- Én vagyok az öszvér.\n- Miért hívnak öszvérnek?\n- Mert apám ló, anyám pedig szamár.\nA kismalac továbbmegy, a bokorból morgást hall.\n- Szia, én vagyok a kismalac, téged hogy hívnak?\n- Én vagyok a farkaskutya.\n- Miért hívnak farkaskutyának?\n- Mivel apám farkas, anyám meg kutya.\nA kismalac tovább ballag, majd hirtelen zümmögést hall.\n- Szia, én vagyok a kismalac, téged hogy hívnak?\n- Én vagyok a lódarázs.\n- Na persze!",
+    "tts_text": "A kismalac elindul új állatokat megismerni. Találkozik az öszvérrel. Szia, én vagyok a kismalac, téged hogy hívnak? Én vagyok az öszvér. Miért hívnak öszvérnek? Mert apám ló, anyám pedig szamár. A kismalac továbbmegy, a bokorból morgást hall. Szia, én vagyok a kismalac, téged hogy hívnak? Én vagyok a farkaskutya. Miért hívnak farkaskutyának? Mivel apám farkas, anyám meg kutya. A kismalac tovább ballag, majd hirtelen zümmögést hall. Szia, én vagyok a kismalac, téged hogy hívnak? Én vagyok a lódarázs. Na persze!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_009",
+    "source_number": 23,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos_szójáték",
+    "text": "Medvééknél vendégség van.\nMedvemama így szól a medvegyerekhez:\n- Nem szégyelled magad? Mutatkozz be a vendégeknek!\nMire a medvegyerek:\n- Bocs.",
+    "tts_text": "Medvééknél vendégség van. Medvemama így szól a medvegyerekhez: Nem szégyelled magad? Mutatkozz be a vendégeknek! Mire a medvegyerek: Bocs.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_010",
+    "source_number": 25,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Egy éve vettem egy kaméleont.\nCsak tudnám, hogy hol a csodában lehet!",
+    "tts_text": "Egy éve vettem egy kaméleont. Csak tudnám, hogy hol a csodában lehet!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_011",
+    "source_number": 26,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Két jegesmedve sétál a sivatagban, az egyik megszólal:\n- Te itt rettentően zord tél lehet!\n- Miből gondolod?\n- Nem látod, hogy mennyi homokot szórtak a jégre?",
+    "tts_text": "Két jegesmedve sétál a sivatagban, az egyik megszólal: Te itt rettentően zord tél lehet! Miből gondolod? Nem látod, hogy mennyi homokot szórtak a jégre?",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_012",
+    "source_number": 27,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "- Miért van olyan magasan a zsiráf feje?\n- Mert büdös a lába!",
+    "tts_text": "Miért van olyan magasan a zsiráf feje? Mert büdös a lába!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_013",
+    "source_number": 29,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "mesei",
+    "text": "Piroska odaér a nagymama házához és bemegy.\n- Nagymama! Miért olyan nagy a füled?\n- Azért, hogy jobban halljalak.\n- Nagymama! Miért olyan nagy a szemed?\n- Azért, hogy jobban lássalak.\n- Nagymama! Miért olyan nagy az orrod?\n- Azért, hogy jobban érezzem a sütemény illatát.\n- De nagymama! Miért olyan nagyok a fogaid?\n- Azért, hogy jobban meg tudjam rágni a répát, amit nekem hoztál.\n- De nagymama! Én nem is szoktam répát hozni neked!\n- Hát ez nem jött össze - mondta a nyúl és kimászott a nagymama ágyából.",
+    "tts_text": "Piroska odaér a nagymama házához és bemegy. Nagymama! Miért olyan nagy a füled? Azért, hogy jobban halljalak. Nagymama! Miért olyan nagy a szemed? Azért, hogy jobban lássalak. Nagymama! Miért olyan nagy az orrod? Azért, hogy jobban érezzem a sütemény illatát. De nagymama! Miért olyan nagyok a fogaid? Azért, hogy jobban meg tudjam rágni a répát, amit nekem hoztál. De nagymama! Én nem is szoktam répát hozni neked! Hát ez nem jött össze mondta a nyúl és kimászott a nagymama ágyából.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_014",
+    "source_number": 32,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos_szójáték",
+    "text": "Bonyolult állat a tehén… De én mégis megfejtem!",
+    "tts_text": "Bonyolult állat a tehén… De én mégis megfejtem!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_015",
+    "source_number": 37,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos_szójáték",
+    "text": "Két katica beszélget:\n- Átmentél a vizsgán?\n- Persze, és te?\n- Én is, hét ponttal.",
+    "tts_text": "Két katica beszélget: Átmentél a vizsgán? Persze, és te? Én is, hét ponttal.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_016",
+    "source_number": 40,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "A kisbéka sétál az úton.\nEgyszer csak egy elágazáshoz ér és megdöbbenve olvassa:\n\"Balra a szépek, jobbra az okosak.\"\nA kisbéka felsóhajt:\n- Most szakadjak ketté?",
+    "tts_text": "A kisbéka sétál az úton. Egyszer csak egy elágazáshoz ér és megdöbbenve olvassa: \"Balra a szépek, jobbra az okosak.\" A kisbéka felsóhajt: Most szakadjak ketté?",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_017",
+    "source_number": 44,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Egy kutya gondolatai:\n- Itt lakom ezzel az emberrel, aki etet engem, meleg szállást biztosít, simogat és szeret engem. Ezek szerint ő az Isten!\nEgy macska gondolatai:\n- Itt lakom ezzel az emberrel. Etet engem, simogat, takarít, szállást biztosít. Ezek szerint én vagyok az Isten!",
+    "tts_text": "Egy kutya gondolatai: Itt lakom ezzel az emberrel, aki etet engem, meleg szállást biztosít, simogat és szeret engem. Ezek szerint ő az Isten! Egy macska gondolatai: Itt lakom ezzel az emberrel. Etet engem, simogat, takarít, szállást biztosít. Ezek szerint én vagyok az Isten!",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_018",
+    "source_number": 45,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "- Mi a legbiztosabb módszer a tejtartósításra?\n- ??\n- Benne kell hagyni a tehénben.",
+    "tts_text": "Mi a legbiztosabb módszer a tejtartósításra? ?? Benne kell hagyni a tehénben.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_019",
+    "source_number": 49,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos",
+    "text": "Egy festőművész elmegy a hegyekbe, hogy témát találjon az új festményéhez. Találkozik a pásztorral, aki a juhait tereli.\n- Lefesthetem a juhait? - kérdezi a festőművész.\n- Dehogy is! Hát ki venné meg utána az összefestett gyapjújukat?",
+    "tts_text": "Egy festőművész elmegy a hegyekbe, hogy témát találjon az új festményéhez. Találkozik a pásztorral, aki a juhait tereli. Lefesthetem a juhait? kérdezi a festőművész. Dehogy is! Hát ki venné meg utána az összefestett gyapjújukat?",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  },
+  {
+    "id": "joke_020",
+    "source_number": 50,
+    "type": "joke",
+    "language": "hu",
+    "age_group": "kids",
+    "category": "állatos_szójáték",
+    "text": "- Hogy hívják az átlátszó kutyát?\n- Nylon tacskó.",
+    "tts_text": "Hogy hívják az átlátszó kutyát? Nylon tacskó.",
+    "tags": [
+      "kurált",
+      "magyar"
+    ]
+  }
+]

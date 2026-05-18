@@ -30,6 +30,7 @@ esp_err_t robot_voice_start_push_to_talk(void);
 esp_err_t robot_voice_start_push_to_talk_ex(char *error, size_t error_len);
 esp_err_t robot_voice_record_wav_file(size_t *bytes_out, char *error, size_t error_len);
 void robot_voice_set_timing(const robot_voice_timing_t *timing);
+void robot_voice_set_last_transcript(const char *transcript);
 void robot_voice_mark_uploading(void);
 void robot_voice_mark_waiting_backend(void);
 void robot_voice_mark_playing_reply(void);

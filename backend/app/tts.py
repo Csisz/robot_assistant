@@ -11,7 +11,7 @@ from openai import OpenAI
 
 logger = logging.getLogger("robot_backend.tts")
 
-MAX_TTS_CHARS = 1200
+MAX_TTS_CHARS = 450
 
 
 def tts_enabled() -> bool:

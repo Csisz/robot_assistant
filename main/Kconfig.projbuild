@@ -36,50 +36,56 @@ endmenu
 
 menu "Robot Features"
     config ROBOT_ENABLE_KIDS_CHAT
-        bool "Enable Kids Chat mode"
+        bool "Enable ChatGPT companion chat"
+        default y
+
+    config ROBOT_ENABLE_VOICE_INPUT
+        bool "Enable microphone voice input"
+        depends on ROBOT_ENABLE_KIDS_CHAT
         default y
 
     config ROBOT_ENABLE_VOICE_WEB_ROUTE
-        bool "Enable temporary web button for push-to-talk voice test"
-        depends on ROBOT_ENABLE_KIDS_CHAT
-        default n
-
-    config ROBOT_ENABLE_FACE_DETECTION
-        bool "Enable background face detection"
-        default n
-
-    config ROBOT_ENABLE_FACE_RECOGNITION
-        bool "Enable face recognition model loading"
-        depends on ROBOT_ENABLE_FACE_DETECTION
-        default n
-
-    config ROBOT_ENABLE_FACE_ENROLLMENT
-        bool "Enable face enrollment web workflow"
-        depends on ROBOT_ENABLE_FACE_DETECTION
-        default n
+        bool "Expose voice input web test routes"
+        depends on ROBOT_ENABLE_VOICE_INPUT
+        default y
 
     config ROBOT_CHAT_BACKEND_HOST
-        string "Kids Chat backend host"
+        string "Chat backend host"
         default "192.168.1.234"
         depends on ROBOT_ENABLE_KIDS_CHAT
 
     config ROBOT_CHAT_BACKEND_PORT
-        int "Kids Chat backend port"
+        int "Chat backend port"
         default 8000
         depends on ROBOT_ENABLE_KIDS_CHAT
 
     config ROBOT_CHAT_BACKEND_PATH
-        string "Kids Chat backend path"
+        string "Chat backend path"
         default "/api/robot/chat"
         depends on ROBOT_ENABLE_KIDS_CHAT
 
     config ROBOT_CHAT_DEVICE_ID
-        string "Kids Chat device id"
+        string "Chat device id"
         default "robot_assistant_esp32s3"
         depends on ROBOT_ENABLE_KIDS_CHAT
 
     config ROBOT_CHAT_LOCALE
-        string "Kids Chat locale"
+        string "Chat locale"
         default "hu-HU"
+        depends on ROBOT_ENABLE_KIDS_CHAT
+
+    config ROBOT_WIFI_TRY_HIDDEN_PROFILES
+        bool "Try WiFi profiles directly for hidden SSIDs"
+        default n
+
+    config ROBOT_VOICE_UPLOAD_CHUNK_BYTES
+        int "Voice upload chunk size in bytes"
+        range 4096 65536
+        default 16384
+        depends on ROBOT_ENABLE_VOICE_INPUT
+
+    config ROBOT_VOICE_BACKEND_PATH
+        string "Voice chat backend path"
+        default "/api/robot/voice-chat"
         depends on ROBOT_ENABLE_KIDS_CHAT
 endmenu

@@ -1,8 +1,10 @@
 #pragma once
 
-#include "esp_err.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "esp_err.h"
+#include "esp_audio_simple_player.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +45,7 @@ esp_err_t robot_chat_start_voice_record(char *error, size_t error_len);
 bool robot_chat_worker_available(void);
 const char *robot_chat_backend_url(void);
 esp_err_t robot_chat_set_backend_base_url(const char *backend_base_url);
+void robot_chat_audio_state_changed(esp_asp_state_t state);
 
 #ifdef __cplusplus
 }
